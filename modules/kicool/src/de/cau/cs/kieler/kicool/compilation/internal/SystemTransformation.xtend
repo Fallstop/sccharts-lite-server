@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation.internal
 
+import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
 import de.cau.cs.kieler.kexpressions.KExpressionsFactory
 import de.cau.cs.kieler.kicool.ProcessorEntry
 import de.cau.cs.kieler.kicool.ProcessorGroup
@@ -87,6 +88,7 @@ class SystemTransformation {
         val copier = new Copier
         val result = copier.copy(source) 
         copier.copyReferences
+        SourceTrace.copied(copier)
         
         for (eObject : source.eAllContents.filter(ProcessorEntry).toIterable) {
             cc.systemMap.put(copier.get(eObject) as ProcessorEntry, eObject)

@@ -45,6 +45,8 @@ import static extension de.cau.cs.kieler.kicool.compilation.internal.Environment
 import static extension de.cau.cs.kieler.kicool.compilation.internal.UniqueNameCachePopulation.populateNameCache
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.addTracingProperty
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.isTracingActive
+import de.cau.cs.kieler.kicool.diagnostics.GeneratedTrace
+import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
 
 /**
  * A compilation context is the central compilation unit. Once you prepared a context, you can
@@ -78,7 +80,8 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
     /** Recording of the notifications if enabled. */
     @Accessors(PUBLIC_GETTER) List<AbstractContextNotification> notifications
     /** Stops compilation if any error occurs */
-    @Accessors boolean stopOnError = false
+    /** Code generated after a failed processor is incomplete and must never be deployed, so compilation stops. */
+    @Accessors boolean stopOnError = true
     
     var Processor<?,?> actualProcessor = null
     
@@ -107,6 +110,10 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
     
     /** Invoke the compilation process. */
     def Environment compile() {
+        // Diagnostics: remember where the original model's objects come from and start a fresh
+        // generated-code trace for this compilation.
+        GeneratedTrace.begin(this)
+        SourceTrace.begin(originalModel)
         startEnvironment.addTracingProperty
         
         val modelCopy = if (originalModel instanceof EObject) {

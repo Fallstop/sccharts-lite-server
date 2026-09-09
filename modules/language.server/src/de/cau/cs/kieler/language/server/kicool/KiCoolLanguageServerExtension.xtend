@@ -456,7 +456,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
             var future = new CompletableFuture()
             future.complete(void)
             future.thenAccept [
-                client.didCompile(new DidCompileParam(new CompilationResults(this.snapshotMap.get(uri)), uri, finished, currentIndex, maxIndex))
+                client.didCompile(new DidCompileParam(new CompilationResults(this.snapshotMap.get(uri), this.objectMap.get(uri), finished, uri), uri, finished, currentIndex, maxIndex))
             ].exceptionally [ throwable |
                 LOG.error('Error while sending compilation results.', throwable)
                 sendError('Error while sending compilation results.' + throwable)

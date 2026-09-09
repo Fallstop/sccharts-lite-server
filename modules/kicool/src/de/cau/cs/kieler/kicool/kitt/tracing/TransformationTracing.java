@@ -388,6 +388,8 @@ public class TransformationTracing {
      * @return unmodified eObject parameter
      */
     public static <T extends EObject> T trace(final T eObject, final EObject origin) {
+        // Diagnostics provenance is recorded whether or not the tracing engine is active.
+        de.cau.cs.kieler.kicool.diagnostics.SourceTrace.copied(eObject, origin);
         Thread t = Thread.currentThread();
         TracingMapping mapping = tracingMappings.get(t);
         if (mapping != null) {

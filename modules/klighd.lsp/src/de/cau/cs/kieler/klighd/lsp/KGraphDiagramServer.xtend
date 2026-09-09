@@ -133,6 +133,13 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
      * @param newRoot the diagram to request the images for.
      */
     protected def prepareUpdateModel(SModelRoot newRoot) {
+        // A newer request already replaced this diagram; its model must not reach the client.
+        if (newRoot !== null) {
+            synchronized (diagramState) {
+                if (diagramState.getKGraphContext(newRoot.id) === null
+                    || diagramState.getKGraphToSModelElementMap(newRoot.id) === null) return
+            }
+        }
         synchronized (modelLock) {
             currentRoot = newRoot
             if (newRoot !== null) {

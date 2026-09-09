@@ -83,7 +83,7 @@ abstract class AbstractLanguageServer implements Runnable {
                 if (f !== null) {
                     f.accept(null)
                     mainThreadQueue.poll
-                    mainThreadQueue.notify
+                    mainThreadQueue.notifyAll
                 }
             }
         }
@@ -94,21 +94,36 @@ abstract class AbstractLanguageServer implements Runnable {
      * This method will wait until the function is executed.
      */
     static def addToMainThreadQueue(Consumer<Object> f) {
-
+        // Work requested from the main thread itself runs inline: a queued task whose continuation asks for
+        // a layout would otherwise queue work for the main thread and wait for it, that is, for itself.
+        if (ON_MAIN_THREAD.get) {
+            f.accept(null)
+            return
+        }
         val Maybe<Throwable> maybeThrowable = new Maybe
+        val boolean[] done = newBooleanArrayOfSize(1)
         synchronized (mainThreadQueue) {
             mainThreadQueue.add([
+                ON_MAIN_THREAD.set(true)
                 // Make sure methods in the main thread queue do not throw, any throwable thrown by the given function
                 // is remembered and finally re-thrown by this method.
                 try {
                     f.accept(null)
                 } catch (Throwable t) {
                     maybeThrowable.set(t)
+                } finally {
+                    ON_MAIN_THREAD.set(false)
+                    synchronized (mainThreadQueue) {
+                        done.set(0, true)
+                        mainThreadQueue.notifyAll
+                    }
                 }
             ])
-            // Wait to continue
-            while (!mainThreadQueue.isNullOrEmpty) {
-                mainThreadQueue.notify
+            mainThreadQueue.notifyAll
+            // Each caller waits for its own task. One shared notify() with a wait for the whole queue to drain
+            // only works while a single caller waits at a time; with overlapping diagram requests a wake-up
+            // could land on the wrong thread and every thread waited forever.
+            while (!done.get(0)) {
                 mainThreadQueue.wait
             }
         }
@@ -116,6 +131,8 @@ abstract class AbstractLanguageServer implements Runnable {
             throw maybeThrowable.get
         }
     }
+
+    static val ThreadLocal<Boolean> ON_MAIN_THREAD = ThreadLocal.withInitial[false]
     
     /**
      * Starts the language server.

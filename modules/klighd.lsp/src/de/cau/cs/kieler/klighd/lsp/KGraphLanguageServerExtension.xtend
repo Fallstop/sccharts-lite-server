@@ -451,12 +451,12 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
             // With that new diagram server, do a similar procedure to generate a diagram as for usual diagrams (except,
             // use the 'model' as its model.
             if (diagramUpdater instanceof KGraphDiagramUpdater) {
-                synchronized (diagramState) {
-                    (diagramUpdater as KGraphDiagramUpdater).prepareModel(diagramServer, model, uri)
-                    AbstractLanguageServer.addToMainThreadQueue([
-                        (diagramUpdater as KGraphDiagramUpdater).updateLayout(diagramServer)
-                    ])
-                }
+                // Not under the diagram-state lock: the queued layout step takes that lock on the main thread,
+                // so waiting for the main thread while holding it deadlocked overlapping requests.
+                (diagramUpdater as KGraphDiagramUpdater).prepareModel(diagramServer, model, uri)
+                AbstractLanguageServer.addToMainThreadQueue([
+                    (diagramUpdater as KGraphDiagramUpdater).updateLayout(diagramServer)
+                ])
                 // Also, update the syntheses available for the given diagram.
                 if (!update) {
                     val availableSynthesesData = getAvailableSynthesesData(model.class)

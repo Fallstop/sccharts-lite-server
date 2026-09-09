@@ -13,6 +13,7 @@
  */
 package de.cau.cs.kieler.scg.processors
 
+import de.cau.cs.kieler.scg.diagnostics.Scheduling
 import com.google.inject.Inject
 import de.cau.cs.kieler.kexpressions.keffects.Assignment
 import de.cau.cs.kieler.kicool.compilation.InplaceProcessor
@@ -68,6 +69,19 @@ class SimpleGuardScheduler extends InplaceProcessor<SCGraphs> implements Traceab
 	 * {@inherited}
 	 */
     def void schedule(SCGraph scg) {
+        try {
+            doSchedule(scg)
+        } finally {
+            // Diagnostics: when the graph is not schedulable, explain it as a dependency cycle with source ranges.
+            try {
+                Scheduling.analyze(this, scg)
+            } catch (Exception e) {
+                System.err.println("KIELER diagnostic tracing: " + e)
+            }
+        }
+    }
+
+    private def void doSchedule(SCGraph scg) {
     	/** 
     	 * The {@code nodesToSchedule} {@link Set} contains the nodes that are still
     	 * not scheduled. The topological sort should remove nodes after they have been placed.

@@ -13,6 +13,7 @@
  */
 package de.cau.cs.kieler.kicool.kitt.tracing.internal;
 
+import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
 import com.google.inject.Binder
 import com.google.inject.Module
 import de.cau.cs.kieler.kexpressions.extensions.EcoreUtilExtensions
@@ -111,7 +112,7 @@ class TracingIntegration extends IntermediateProcessor<EObject, EObject> {
             if (environment.getProperty(ONGOING_WORKING_COPY)) {
                 environment.warnings.add("Tracing is not supported in combination with 'ongoing working copy' option!")
             }
-            return EcoreUtil.copy(model)
+            return SourceTrace.copy(model)
         }
         
         val tracing = environment.getProperty(Tracing.TRACING_DATA)
@@ -132,6 +133,7 @@ class TracingIntegration extends IntermediateProcessor<EObject, EObject> {
             val copier = new Copier()
             val EObject result = copier.copy(model)
             copier.copyReferences
+            SourceTrace.copied(copier)
             return new Pair(result as T, copier)
         }
         

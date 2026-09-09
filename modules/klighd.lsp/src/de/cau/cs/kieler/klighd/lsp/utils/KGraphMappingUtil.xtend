@@ -53,7 +53,9 @@ class KGraphMappingUtil {
      * 
      * @param mapping The mapping between KGraph and SGraph elements
      */
-    static def mapLayout(Map<KGraphElement, SModelElement> mapping) {
+    static def void mapLayout(Map<KGraphElement, SModelElement> mapping) {
+        // The element map of a replaced diagram is gone; there is nothing left to position.
+        if (mapping === null) return;
         mapping.forEach[kGraphElement, sModelElement |
             // Layout data looks different for different KGraph Element Types
             if (kGraphElement instanceof KNode && sModelElement instanceof SKNode) {

@@ -13,6 +13,7 @@
  */
  package de.cau.cs.kieler.scg.processors.analyzer
 
+import de.cau.cs.kieler.scg.diagnostics.Loops
 import com.google.inject.Inject
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
@@ -81,6 +82,19 @@ class LoopAnalyzerV2 extends InplaceProcessor<SCGraphs> {
     }
     
     override process() {
+        try {
+            doProcess()
+        } finally {
+            // Diagnostics: give the bare "Instantaneous loop detected!" message locations and an explanation.
+            try {
+                Loops.analyze(this)
+            } catch (Exception e) {
+                System.err.println("KIELER diagnostic tracing: " + e)
+            }
+        }
+    }
+
+    private def void doProcess() {
         val model = getModel
         val loopData = new LoopData(environment.getProperty(LOOP_DATA_PERSISTENT))
         val threadData = environment.getProperty(ThreadAnalyzer.THREAD_DATA)

@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation
 
+import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
 import com.google.common.reflect.TypeToken
 import de.cau.cs.kieler.annotations.NamedObject
 import de.cau.cs.kieler.core.properties.IProperty
@@ -258,6 +259,7 @@ abstract class Processor<Source, Target> implements IKiCoolCloneable {
         val copier = new Copier()
         val EObject result = copier.copy(model)
         copier.copyReferences
+        SourceTrace.copied(copier)
         return new Pair(result as T, copier)
     }     
     

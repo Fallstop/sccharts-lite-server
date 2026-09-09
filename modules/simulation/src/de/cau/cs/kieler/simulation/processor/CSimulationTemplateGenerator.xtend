@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.simulation.processor
 
+import de.cau.cs.kieler.simulation.diagnostics.SimulationStrings
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
 import de.cau.cs.kieler.kicool.compilation.CCodeFile
@@ -52,6 +53,13 @@ class CSimulationTemplateGenerator extends AbstractSimulationTemplateGenerator {
     }
     
     override generateTemplate() {
+        val container = doGenerateTemplate()
+        // String inputs must outlive the JSON message that supplied them.
+        SimulationStrings.retain(container)
+        return container
+    }
+
+    private def doGenerateTemplate() {
         // Extend general template environment
         val infra = ProjectInfrastructure.getProjectInfrastructure(environment)
         val generalTemplateEnvironment = environment.getProperty(TemplateEngine.GENRAL_ENVIRONMENT)?:newHashMap

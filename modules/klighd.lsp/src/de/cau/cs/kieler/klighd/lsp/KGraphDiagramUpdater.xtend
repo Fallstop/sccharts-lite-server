@@ -184,10 +184,10 @@ class KGraphDiagramUpdater extends DiagramUpdater {
             }
             // Only update an erroneous model if there was no diagram shown before.
             if (!hasErrors || server.currentRoot.type == "NONE") {
-                synchronized (diagramState) {
-                    prepareModel(server, model, uri)
-                    updateLayout(server)
-                }
+                // Not under the diagram-state lock: prepareModel waits for KLighD's main thread, whose queued
+                // layout step takes that same lock. prepareModel and createModel serialize on MODEL_LOCK instead.
+                prepareModel(server, model, uri)
+                updateLayout(server)
             }
             return null as Void
         ]
@@ -202,6 +202,19 @@ class KGraphDiagramUpdater extends DiagramUpdater {
      * @param uri The identifying URI to access the diagram state maps.
      */
     def void prepareModel(KGraphDiagramServer server, Object model, String uri) {
+        synchronized (MODEL_LOCK) {
+            doPrepareModel(server, model, uri)
+        }
+    }
+
+    /**
+     * A synthesis rebuilds the view model on KLighD's main thread while another request may traverse it.
+     * This lock is held for the whole of prepareModel and createModel, is always taken before the
+     * diagram-state lock, and is never taken on the main thread.
+     */
+    static val Object MODEL_LOCK = new Object
+
+    private def void doPrepareModel(KGraphDiagramServer server, Object model, String uri) {
         val properties = new KlighdSynthesisProperties()
         var SprottyViewer viewer = null
         var String synthesisId
@@ -304,6 +317,14 @@ class KGraphDiagramUpdater extends DiagramUpdater {
      * @return The generated SGraph
      */
     def SGraph createModel(ViewContext viewContext, String uri, CancelIndicator cancelIndicator) {
+        // A queued refresh can outlive its closed or replaced diagram context; callers treat null as cancelled.
+        if (viewContext === null) return null
+        synchronized (MODEL_LOCK) {
+            return doCreateModel(viewContext, uri, cancelIndicator)
+        }
+    }
+
+    private def SGraph doCreateModel(ViewContext viewContext, String uri, CancelIndicator cancelIndicator) {
         // Generate the SGraph model from the KGraph model and store every later relevant part in the
         // diagram state.
         

@@ -71,6 +71,8 @@ class KGraphLayoutEngine extends ElkLayoutEngine {
      * @param uri The identifying URI of the graph.
      */
     def onlyLayoutOnKGraph(String uri) {
+        // A later request replaced this diagram; laying out the old model would only fail.
+        if (isStale(uri)) return
         val kGraphContext = diagramState.getKGraphContext(uri)
         // Remove any padding from the root node to avoid blank padding around the edge of the entire graph.
         kGraphContext.viewModel.setProperty(CoreOptions.PADDING, new ElkPadding(0))
@@ -104,5 +106,12 @@ class KGraphLayoutEngine extends ElkLayoutEngine {
         val outputStream = new ByteArrayOutputStream
         resource.save(outputStream, emptyMap)
         return outputStream.toString
+    }
+
+    /** A superseded request's layout step finds its diagram context or element map already replaced. */
+    private def boolean isStale(String uri) {
+        synchronized (diagramState) {
+            return diagramState.getKGraphContext(uri) === null || diagramState.getKGraphToSModelElementMap(uri) === null
+        }
     }
 }

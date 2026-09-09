@@ -12,6 +12,8 @@
  */
 package de.cau.cs.kieler.scg.processors.codegen.c
 
+import de.cau.cs.kieler.kicool.diagnostics.GeneratedTrace
+import de.cau.cs.kieler.scg.diagnostics.ScgTrace
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.StringAnnotation
 import de.cau.cs.kieler.kexpressions.FunctionCall
@@ -132,6 +134,18 @@ class CCodeGeneratorLogicModule extends SCGCodeGeneratorModule {
     }
     
     protected def void serializeToCode(Assignment assignment, int indent, 
+        extension CCodeGeneratorStructModule struct, extension CCodeSerializeHRExtensions serializer
+    ) {
+        // Diagnostics: associate the emitted fragment with the assignment's source ranges.
+        GeneratedTrace.start(this)
+        try {
+            doSerializeToCode(assignment, indent, struct, serializer)
+        } finally {
+            GeneratedTrace.end(this, ScgTrace.locations(assignment))
+        }
+    }
+
+    private def void doSerializeToCode(Assignment assignment, int indent, 
         extension CCodeGeneratorStructModule struct, extension CCodeSerializeHRExtensions serializer
     ) {
         if (assignment.valuedObject === null) {

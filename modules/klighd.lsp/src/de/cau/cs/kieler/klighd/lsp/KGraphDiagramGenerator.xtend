@@ -16,6 +16,9 @@
  */
 package de.cau.cs.kieler.klighd.lsp
 
+import org.eclipse.emf.ecore.EObject
+import org.eclipse.emf.ecore.util.EcoreUtil
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashBiMap
 import de.cau.cs.kieler.klighd.LightDiagramServices
@@ -333,14 +336,11 @@ class KGraphDiagramGenerator implements IDiagramGenerator {
      * Set all properties supported by the client.
      */
     def setProperties(SKNode nodeElement, KNode node) {
-        
-        var parent = node
-        if (node.parent !== null) {
-            parent = node.parent
-        }
+        // Read the parent once: a concurrent synthesis could detach the node between two reads.
+        val parent = node.parent
         
         // The client expects every node to know what its direction is
-        nodeElement.direction = parent.getProperty(LayeredOptions.DIRECTION)
+        nodeElement.direction = (if (parent !== null) parent else node).getProperty(LayeredOptions.DIRECTION)
     }
 
     /**
@@ -484,6 +484,31 @@ class KGraphDiagramGenerator implements IDiagramGenerator {
                         (sModelElement as SKPort).data = #[currentRendering]
                     case SKLabel:
                         (sModelElement as SKLabel).data = #[currentRendering]
+                }
+            }
+        ]
+        
+        publishTraces()
+    }
+
+    /**
+     * Publishes KLighD's source associations as Sprotty trace strings of the form
+     * {@code <file uri>?<startLine>:<startColumn>-<endLine>:<endColumn>#<fragment>}, so that a client can map
+     * diagram elements back to their text ranges and vice versa. Only .sctx resources are traced.
+     */
+    protected def void publishTraces() {
+        kGraphToSModelElementMap.forEach [ kGraphElement, sModelElement |
+            val source = kGraphElement.properties.get(KlighdInternalProperties.MODEL_ELEMENT)
+            if (source instanceof EObject) {
+                val node = NodeModelUtils.getNode(source)
+                if (node !== null && source.eResource !== null) {
+                    val uri = EcoreUtil.getURI(source)
+                    if (uri.isFile && "sctx" == uri.fileExtension) {
+                        val start = NodeModelUtils.getLineAndColumn(node, node.offset)
+                        val end = NodeModelUtils.getLineAndColumn(node, node.endOffset)
+                        val range = (start.line - 1) + ":" + (start.column - 1) + "-" + (end.line - 1) + ":" + (end.column - 1)
+                        sModelElement.trace = uri.trimFragment.appendQuery(range).appendFragment(uri.fragment).toString
+                    }
                 }
             }
         ]

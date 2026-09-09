@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.deploy.processor
 
+import de.cau.cs.kieler.kicool.diagnostics.NativeDiagnostics
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
 import de.cau.cs.kieler.kicool.compilation.Processor
@@ -104,7 +105,20 @@ abstract class AbstractSystemCompilerProcessor<I, O> extends Processor<I, O> {
         return debugFolder
     }    
     
-    def invoke(List<String> command, File directory) {
+    def Integer invoke(List<String> command, File directory) {
+        val status = run(command, directory)
+        // Structured C compiler diagnostics with generated-file and model locations.
+        if (id == "de.cau.cs.kieler.kicool.deploy.compiler.c") {
+            try {
+                NativeDiagnostics.collect(status, this, command, directory, logger)
+            } catch (Exception e) {
+                System.err.println("KIELER C diagnostics: " + e)
+            }
+        }
+        return status
+    }
+
+    private def Integer run(List<String> command, File directory) {
         logger.println("Invoking command: " + command.join(" "))
         val pb = createProcessBuilder(command, directory)
         pb.redirectErrorStream(true)
@@ -130,6 +144,7 @@ abstract class AbstractSystemCompilerProcessor<I, O> extends Processor<I, O> {
             environment.errors.add("Error while invoking command", e)
             logger.print("ERROR: Exception while invoking command")
             e.printStackTrace(logger)
+            return null
         }
     }
     
