@@ -68,6 +68,7 @@
 [INFO]    |  \- org.eclipse.sprotty:org.eclipse.sprotty.layout:jar:1.2.0:compile
 [INFO]    |     \- org.eclipse.sprotty:org.eclipse.sprotty:jar:1.2.0:compile
 [INFO]    |        \- log4j:log4j:jar:1.2.17:compile
+[INFO]    +- org.eclipse.elk:org.eclipse.elk.core.service:jar:0.11.0:compile
 [INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.layered:jar:0.11.0:compile
 [INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.mrtree:jar:0.11.0:compile
 [INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.rectpacking:jar:0.11.0:compile
@@ -98,6 +99,6 @@
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  0.771 s
-[INFO] Finished at: 2026-09-09T22:07:36+12:00
+[INFO] Total time:  0.850 s
+[INFO] Finished at: 2026-09-09T22:14:04+12:00
 [INFO] ------------------------------------------------------------------------
