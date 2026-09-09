@@ -1,0 +1,30 @@
+knode source {
+	size: width = 25 height = 12
+	properties:
+	  org.eclipse.elk.portLabels.placement = INSIDE
+	  org.eclipse.elk.portConstraints = FIXED_ORDER
+
+  kpolygon [
+    de.cau.cs.kieler.sccharts.ui.synthesis.style.sccharts = true
+  ] {
+  	points: 
+        left,top;
+        right 6,top;
+        right, top 50%;
+        right 6, bottom;  
+        left,bottom	
+	styles: lineStyle = solid
+  }
+
+  kport out {
+    size: width = 0 height = 0
+    properties:
+    org.eclipse.elk.port.side = EAST
+    
+    klabel "" { 
+    	ktext {
+    		styles: fontSize = 1pt
+    	}
+    }
+  }     
+}

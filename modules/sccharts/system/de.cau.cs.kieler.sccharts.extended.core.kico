@@ -1,0 +1,5 @@
+system de.cau.cs.kieler.sccharts.extended.core
+	label "SCCharts Normalization"
+	
+system de.cau.cs.kieler.sccharts.extended
+system de.cau.cs.kieler.sccharts.core

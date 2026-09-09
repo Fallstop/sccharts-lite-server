@@ -1,0 +1,388 @@
+/*
+ * KIELER - Kiel Integrated Environment for Layout Eclipse RichClient
+ * 
+ * http://www.informatik.uni-kiel.de/rtsys/kieler/
+ * 
+ * Copyright 2015 by
+ * + Kiel University
+ *   + Department of Computer Science
+ *     + Real-Time and Embedded Systems Group
+ * 
+ * This code is provided under the terms of the Eclipse Public License (EPL).
+ * See the file epl-v10.html for the license text.
+ */
+grammar de.cau.cs.kieler.kexpressions.kext.KExt with de.cau.cs.kieler.kexpressions.keffects.KEffects 
+ 
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+import "http://kieler.cs.cau.de/annotations" as annotations
+import "http://kieler.cs.cau.de/kexpressions/0.1.2" as kexpressions
+import "http://kieler.cs.cau.de/keffects/0.1.0" as keffects
+import "http://kieler.cs.cau.de/kext/0.1.0" as kext
+
+/**
+ * @author ssm
+ * @kieler.design 2015-08-23 proposed 
+ * @kieler.rating 2015-08-23 proposed yellow
+ */
+
+/*
+ * KEXT (KText) provides a general stub for subsequent grammars that will use kexpressions, keffects
+ * and need some kind of declaration mechanism. It is also used to generate the textual KEXT language 
+ * that is used for testing kexpressions and keffects.  
+ */
+
+// ------------ //
+//  KEXT Rules  // 
+// ------------ //
+
+// KEXT Rule
+// The KEXT lagnuages starts with an optional declaration part. Then, an arbitrary number of 
+// test entities may follow.
+Kext returns kext::Kext:
+	scopes+=RootScope;
+	
+RootScope returns kext::KExtScope:
+	{kext::KExtScope} 
+    declarations+=Declaration*
+    entities+=TestEntity* 
+	('scope' scopes+=Scope)*;
+
+Scope returns kext::KExtScope:
+	{kext::KExtScope} 
+	(name=ID)? '{'
+    declarations+=Declaration*
+    entities+=TestEntity* 
+	('scope' scopes+=Scope)* '}';
+	
+// Test Entity Rule
+// A test entity is either an annotation expression or an effect.
+TestEntity returns kext::TestEntity:
+    expression=(AnnotatedExpression | AnnotatedJsonExpression) | effect=Effect;
+
+// Annotated Expression Rule
+// An annotated expression is declared with the keyword "expression". It may be preceded by a list
+// of annotations. The expression itself follows the keyword.
+AnnotatedExpression returns kext::AnnotatedExpression:
+    annotations+=Annotation*
+    'expression'
+    expression=Expression;
+    
+AnnotatedJsonExpression returns kext::AnnotatedExpression:
+    annotations+=Annotation*
+    'json'
+    expression=JsonObjectValue;
+
+// Declaration Rule
+// A declaration follows the general KIELER pattern for variable declaration. More specific:
+// this centralized declaration rule should replace any other declaration in drived grammars.
+// It may start with arbitrary many declarations followed by keywords affecting the type of the
+// valued objects that follow.
+// Examples: const float pi = 3.14, input signal I, output bool z  
+Declaration returns kexpressions::Declaration:
+    VariableDeclaration | ReferenceDeclaration | ScheduleDeclaration | ClassDeclaration;
+
+DeclarationWOSemicolon returns kexpressions::Declaration:
+    VariableDeclarationWOSemicolon | ReferenceDeclarationWOSemicolon | ScheduleDeclarationWOSemicolon | ClassDeclarationWOSemicolon;
+
+
+VariableDeclaration returns kexpressions::VariableDeclaration:
+    annotations+=Annotation*
+    access=AccessModifier?
+	const?='const'?
+    input?='input'? 
+    output?='output'?
+    global?='global'?
+    static?='static'?
+    (
+        (signal?='signal'? type = ValueType)
+        | 
+        signal?='signal'
+        |
+        (type = HostType hostType = STRING)
+    ) 
+    valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)* ';'
+    annotations+=CommentAnnotatonSL?;
+    
+VariableDeclarationWOSemicolon returns kexpressions::VariableDeclaration:
+    annotations+=Annotation*
+    access=AccessModifier?
+    input?='input'? 
+    output?='output'?
+	const?='const'?
+    global?='global'?
+    static?='static'?
+    (
+        (signal?='signal'? type = ValueType)
+        | signal?='signal'
+        | (type = HostType hostType = STRING)
+    ) 
+    valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*
+    annotations+=CommentAnnotatonSL?; 
+    
+ClassDeclaration returns kext::ClassDeclaration:
+    {kext::ClassDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    host?='host'?
+    ((
+        type = ClassType
+        (name = EString)?
+        '{'
+            declarations+=DeclarationOrMethod*
+        '}'
+    )|(
+        type = StructType
+        (name = EString)?
+        '{'
+            declarations+=Declaration*
+        '}'
+    ))
+    (valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*)?
+    ';'
+    annotations+=CommentAnnotatonSL?
+;
+
+DeclarationOrMethod returns kexpressions::Declaration:
+    Declaration | EnumDeclaration | MethodDeclaration
+;
+
+ClassDeclarationWOSemicolon returns kext::ClassDeclaration:
+    {kext::ClassDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    host?='host'?
+    ((
+        type = ClassType
+        (name = EString)?
+        '{'
+            declarations+=DeclarationOrMethodWOSemicolon*
+        '}'
+    )|(
+        type = StructType
+        (name = EString)?
+        '{'
+            declarations+=DeclarationWOSemicolon*
+        '}'
+    ))
+    (valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*)?
+    annotations+=CommentAnnotatonSL?
+;
+
+DeclarationOrMethodWOSemicolon returns kexpressions::Declaration:
+    DeclarationWOSemicolon | EnumDeclarationWOSemicolon | MethodDeclarationWOSemicolon
+;
+
+EnumDeclaration returns kext::ClassDeclaration:
+    {kext::ClassDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    host?='host'?
+    type = EnumType
+    valuedObjects+=SimpleValuedObject
+    (hostType=STRING)?
+    '{'
+        declarations+=EnumMemberDeclaration
+        ';'
+    '}'
+    ';'
+    annotations+=CommentAnnotatonSL?
+;
+
+EnumMemberDeclaration returns kexpressions::VariableDeclaration:
+    annotations+=QuotedStringAnnotation*
+    valuedObjects+=SimpleValuedObject (',' valuedObjects+=SimpleValuedObject)*
+    annotations+=CommentAnnotatonSL?
+;
+
+EnumDeclarationWOSemicolon returns kext::ClassDeclaration:
+    {kext::ClassDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    host?='host'?
+    type = EnumType
+    valuedObjects+=SimpleValuedObject
+    (hostType = STRING)?
+    '{'
+        declarations+=EnumMemberDeclaration
+    '}'
+    annotations+=CommentAnnotatonSL?
+;
+
+MethodDeclaration returns kexpressions::MethodDeclaration:
+    {kexpressions::MethodDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    (returnType=MethodReturnType | (returnType=HostType returnHostType=STRING))?
+    valuedObjects+=SimpleValuedObject
+    (('(' parameterDeclarations+=VariableDeclarationWOSemicolon (',' parameterDeclarations+=VariableDeclarationWOSemicolon)* ')') | '()')
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    ';'
+    annotations+=CommentAnnotatonSL?
+;
+
+MethodDeclarationWOSemicolon returns kexpressions::MethodDeclaration:
+    {kexpressions::MethodDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    (returnType=MethodReturnType | (returnType=HostType returnHostType=STRING))?
+    valuedObjects+=SimpleValuedObject
+    (('(' parameterDeclarations+=VariableDeclarationWOSemicolon (',' parameterDeclarations+=VariableDeclarationWOSemicolon)* ')') | '()')
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    annotations+=CommentAnnotatonSL?
+;
+    
+ReferenceDeclaration returns kexpressions::ReferenceDeclaration:
+    annotations+=Annotation*
+    access=AccessModifier?
+    ((
+        input?='input'?
+        output?='output'?
+        const?='const'?
+        'ref'
+        (referenceContainer = [annotations::NamedObject|PrimeID] '.')?
+        reference = [annotations::NamedObject|PrimeID]
+        ('<' genericParameters += GenericParameter (',' genericParameters += GenericParameter)* '>')?
+        valuedObjects+=ReferenceValuedObject (',' valuedObjects+=ReferenceValuedObject)*
+    ) | (
+        'extern' extern += ExternString (',' extern += ExternString)*
+        valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*
+    ))
+    ';'
+    annotations+=CommentAnnotatonSL?;
+    
+ReferenceDeclarationWOSemicolon returns kexpressions::ReferenceDeclaration:
+    annotations+=Annotation*
+    access=AccessModifier?
+    ((
+        input?='input'?
+        output?='output'?
+        const?='const'?
+        'ref'
+        (referenceContainer = [annotations::NamedObject|PrimeID] '.')?
+        reference = [annotations::NamedObject|PrimeID]
+        ('<' genericParameters += GenericParameter (',' genericParameters += GenericParameter)* '>')?
+        valuedObjects+=ReferenceValuedObject (',' valuedObjects+=ReferenceValuedObject)*
+    ) | (
+        'extern' extern += ExternString (',' extern += ExternString)*
+        valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*
+    ))
+    annotations+=CommentAnnotatonSL?;
+    
+ExternString returns kexpressions::ExternString:
+    annotations+=TagAnnotation*
+    code = STRING
+;
+
+
+// ---
+//  Generics
+// ---
+
+GenericParameterDeclaration returns kexpressions::GenericParameterDeclaration:
+    annotations+=QuotedStringAnnotation*
+    valuedObjects+=SimpleValuedObject
+    (
+        ('is' valueType = ValueType)
+        |
+        ('is' (reference?='ref')? type = [annotations::NamedObject|PrimeID])
+    )?
+;
+
+GenericParameter returns kexpressions::Parameter:
+    // Both VOReference and GenericTypeReference will always match for simple names (PrimeID).
+    // Here GenericTypeReference has precedence and has to cover certain
+    // references to VOs. This needs to be specifically handled in the scoper and in the resource
+    // by using the KExtGenericParamterConverter.
+    // Furthermore, optional parts may cause VORs accepted by GTRs even if there is an array
+    // index or sub reference specified, this is why there are special non-optional rules.
+    expression = (ValueTypeReference 
+                 | AnyValue
+                 | GenericParameter_GenericTypeReference_Parameterized
+                 | GenericParameter_ValuedObjectReference_Array
+                 | GenericParameter_ValuedObjectReference_Sub
+                 | GenericTypeReference
+                 | ValuedObjectReference)
+;
+
+ValueTypeReference returns kexpressions::ValueTypeReference:
+    valueType = ValueType
+;
+
+GenericTypeReference returns kexpressions::GenericTypeReference:
+    type = [annotations::NamedObject|PrimeID]
+    ('<' genericParameters += GenericParameter (',' genericParameters += GenericParameter)* '>')?
+;
+
+// Special rules for GenericParameter parsing
+GenericParameter_GenericTypeReference_Parameterized returns kexpressions::GenericTypeReference:
+    type = [annotations::NamedObject|PrimeID]
+    '<' genericParameters += GenericParameter (',' genericParameters += GenericParameter)* '>' // mandatory
+;
+GenericParameter_ValuedObjectReference_Array returns kexpressions::ValuedObjectReference:
+    valuedObject=[kexpressions::ValuedObject|PrimeID]
+    ('[' indices+=Expression ']')+ // mandatory
+    ('.' subReference=ValuedObjectReference)?
+;
+GenericParameter_ValuedObjectReference_Sub returns kexpressions::ValuedObjectReference:
+    valuedObject=[kexpressions::ValuedObject|PrimeID]
+    ('[' indices+=Expression ']')*
+    ('.' subReference=ValuedObjectReference) // mandatory
+;
+
+// ---
+//  Scheduling Directives 
+// ---
+    
+ScheduleDeclaration returns kexpressions::ScheduleDeclaration:
+    annotations += Annotation*
+    access=AccessModifier?
+    'schedule' name=STRING?
+    ('global' global = PriorityProtocol)?
+    ('{' priorities += PriorityProtocol (',' priorities += PriorityProtocol)* '}')?
+    valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)* ';'
+    annotations+=CommentAnnotatonSL?;
+    
+ScheduleDeclarationWOSemicolon returns kexpressions::ScheduleDeclaration:
+    annotations += Annotation*
+    access=AccessModifier?
+    'schedule' name=STRING?
+    ('global' global = PriorityProtocol)?
+    ('{' priorities += PriorityProtocol (',' priorities += PriorityProtocol)* '}')?
+    valuedObjects+=ValuedObject (',' valuedObjects+=ValuedObject)*
+    annotations+=CommentAnnotatonSL?;
+    
+enum PriorityProtocol returns kexpressions::PriorityProtocol:
+    CONFLICT="conflicting" | CONFLUENT="commuting";
+    
+// Valued Object Rule
+// A valued object is identified by its name. Then, a part for its cardinalities and an initial 
+// expression may follow. Additionally, the declaration of the object may be finished by a combine part. 
+// Examples: array[10], initial = false, z = 0 combine max
+ValuedObject returns kexpressions::ValuedObject:
+	annotations+=QuotedStringAnnotation*
+    name=PrimeID
+    ('[' cardinalities+=Expression ']')* 
+    ('=' initialValue=Expression)?
+    ( 'combine'
+      (combineOperator = CombineOperator)
+    )?
+    ('label' label=STRING)?;
+    
+ReferenceValuedObject returns kexpressions::ValuedObject:
+    {kexpressions::ValuedObject}
+    annotations+=QuotedStringAnnotation*
+    name=PrimeID
+    ('[' cardinalities+=Expression ']')*
+    ('<' genericParameters += GenericParameter (',' genericParameters += GenericParameter)* '>')?
+    (('(' parameters += Parameter (',' parameters += Parameter)* ')') | '()')?
+    ('=' initialValue=Expression)?
+    ('label' label=STRING)?;
+    
+SimpleValuedObject returns kexpressions::ValuedObject:
+    annotations+=QuotedStringAnnotation*
+    name=PrimeID;
+    
+NamespaceID returns ecore::EString:
+  ExtendedID (':' PrimeID)*; 
+      
+    

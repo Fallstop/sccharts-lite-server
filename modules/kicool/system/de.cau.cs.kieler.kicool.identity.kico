@@ -1,0 +1,6 @@
+public system de.cau.cs.kieler.kicool.identity
+	label "Identity Transformation System"
+	
+intermediate de.cau.cs.kieler.kicool.processors.metrics.eObjectCount	
+	
+de.cau.cs.kieler.kicool.processors.identity

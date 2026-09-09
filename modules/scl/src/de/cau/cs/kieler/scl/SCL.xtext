@@ -1,0 +1,277 @@
+grammar de.cau.cs.kieler.scl.SCL with de.cau.cs.kieler.kexpressions.kext.KExt
+  
+import "http://www.eclipse.org/emf/2002/Ecore" as ecore
+import "http://kieler.cs.cau.de/annotations" as annotations
+import "http://kieler.cs.cau.de/kexpressions/0.1.2" as kexpressions
+import "http://kieler.cs.cau.de/keffects/0.1.0" as keffects
+import "http://kieler.cs.cau.de/kext/0.1.0" as kext
+import "http://kieler.cs.cau.de/scl/0.2.0"
+
+SCLProgram returns SCLProgram:
+    pragmas+=Pragma*
+    modules+=Module*
+;
+
+Module returns Module:
+    (annotations += Annotation)*
+    'module' name = ID ':'?
+    (declarations += Declaration)*
+    (statements += Statement)*
+;
+
+Statement returns Statement:
+      SclAssignment
+    | SclPostfixAssignment
+    | Label
+    | SclEffectAssignment
+    | Conditional
+    | LegacyConditional
+    | Goto
+    | Parallel
+    | Pause
+    | ModuleCall
+    | ScopeStatement
+    | Return
+    | ForLoop
+    | WhileLoop
+;
+
+Pause returns Pause:
+    {Pause}
+    (annotations += Annotation)*
+    'pause'
+    semicolon?=';'?
+;
+
+Label returns Label:
+    (annotations += Annotation)*
+    name = ID ':'
+;
+
+Goto returns Goto:
+    (annotations += Annotation)*
+    'goto' target = [Label|ID]
+    semicolon?=';'?
+;
+
+SclAssignment returns Assignment:
+    (annotations += Annotation)*
+    reference = ValuedObjectReference
+    operator = AssignOperator
+    expression = Expression
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    semicolon?=';'?
+;
+
+SclPostfixAssignment returns Assignment:
+    (annotations+=Annotation)*    
+    reference=ValuedObjectReference
+    operator=PostfixOperator
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    semicolon?=';'?
+;
+
+SclEffectAssignment returns Assignment:
+    (annotations += Annotation)*
+    expression = (
+        ReferenceCall
+    |
+        TextExpression
+    |
+        PrintCall
+    |
+        RandomizeCall
+    |
+        FunctionCall
+    )
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    semicolon?=';'?
+;
+
+
+Return returns Return:
+    (annotations += Annotation)*
+    'return'
+    expression = Expression
+;
+
+Conditional returns Conditional: 
+    (annotations += Annotation)*
+    'if' expression = (BoolScheduleExpression | AtomicExpression)
+    '{'
+    (declarations+=Declaration)*
+    (statements += Statement)*
+    '}'
+    (else = ElseScope | semicolon?=';')?
+;
+
+ElseScope returns ElseScope:
+    {ElseScope}
+    (annotations += Annotation)*
+    'else' '{'
+    (declarations+=Declaration)*
+    (statements += Statement)*      
+    '}'
+    semicolon?=';'?
+;
+
+LegacyConditional returns Conditional: 
+    (annotations += Annotation)*
+    'if' expression = BoolExpression
+    'then'
+    (statements += Statement)*
+    (else = LegacyElseScope)?
+    'end'
+    semicolon?=';'?
+;
+
+LegacyElseScope returns ElseScope:
+    {ElseScope}
+    (annotations += Annotation)*
+    'else'
+    (statements += Statement)* 
+;
+
+Thread returns Thread:
+    {Thread}
+    (
+        (
+            (annotations += Annotation)*
+            '{'
+            (declarations+=Declaration)*
+            (statements += Statement)*
+            '}'
+        ) | (
+            (statements += Statement)*
+        )
+    )
+;
+
+Parallel returns Parallel:
+    'fork'
+    //(forkType=ForkType)?
+    (
+        threads += Thread
+        (
+            'par'
+            threads += Thread
+        )*
+    )
+    'join'
+    //joinAny?='any'
+    semicolon?=';'?
+;
+
+//enum ForkType returns ForkType:
+//    SEQUENTIAL = 'seq' | SEQUENTIAL_PREEMPTIVE = 'seq-abort';
+
+ScopeStatement returns ScopeStatement:
+    {ScopeStatement}
+    (annotations += Annotation)*
+    '{'
+        (declarations+=Declaration)*
+        (statements += Statement)*
+    '}'
+;
+
+ForLoop returns Loop:
+    'for' '('
+    (initializationDeclaration=LoopDeclaration | initialization=EffectOrAssignment)?
+    ';'
+    condition=BoolExpression
+    ';'
+    afterthought=EffectOrAssignment?
+    ')' '{'
+    (declarations += Declaration)*
+    (statements += Statement)*
+    '}'
+    semicolon?=';'?
+;
+
+LoopDeclaration returns kexpressions::VariableDeclaration:
+    annotations += Annotation*
+    (
+        (type = ValueType)
+    | 
+        (type = HostType hostType = STRING)
+    )
+    valuedObjects += ValuedObject
+;
+
+EffectOrAssignment returns keffects::Assignment:
+    (annotations += Annotation)*
+    (
+        reference = ValuedObjectReference
+        operator = PostfixOperator
+    |
+        reference = ValuedObjectReference
+        operator = AssignOperator
+        expression = Expression
+    |
+        expression = Expression
+    )
+    
+;
+
+WhileLoop returns Loop:
+    'while' '('
+    condition=BoolExpression
+    ')' '{'
+    (declarations+=Declaration)*
+    (statements += Statement)*
+    '}'
+    semicolon?=';'?
+;
+
+ModuleCall returns ModuleCall:
+    (annotations += Annotation)*
+    'run'
+    module = [Module|ID]
+    ('(' parameters += ModuleCallParameter (',' parameters += ModuleCallParameter)* ')' | '()')?
+    semicolon?=';'?
+;
+    
+ModuleCallParameter returns kexpressions::Parameter:
+    ((accessType = ParameterAccessType
+    expression = ValuedObjectReference)
+    |
+    expression = Expression)
+    ('to' explicitBinding = [kexpressions::ValuedObject|ID] ('[' explicitBindingIndices+=Expression ']')*)?
+;
+
+@Override
+MethodDeclaration returns kexpressions::MethodDeclaration:
+    {MethodImplementationDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    (returnType=MethodReturnType | (returnType=HostType returnHostType=STRING))?
+    valuedObjects+=SimpleValuedObject
+    (('(' parameterDeclarations+=VariableDeclarationWOSemicolon (',' parameterDeclarations+=VariableDeclarationWOSemicolon)* ')') | '()')
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    (
+        ';'
+        |
+        implemented?='{'
+        annotations+=CommentAnnotatonSL?
+        declarations+=Declaration*
+        statements+=Statement*
+        '}'
+    )
+    annotations+=CommentAnnotatonSL?
+;
+
+@Override
+MethodDeclarationWOSemicolon returns kexpressions::MethodDeclaration:
+    {MethodImplementationDeclaration}
+    annotations+=Annotation*
+    access=AccessModifier?
+    (returnType=MethodReturnType | (returnType=HostType returnHostType=STRING))?
+    valuedObjects+=SimpleValuedObject
+    (('(' parameterDeclarations+=VariableDeclarationWOSemicolon (',' parameterDeclarations+=VariableDeclarationWOSemicolon)* ')') | '()')
+    ('schedule' schedule+=ScheduleObjectReference+)?
+    (implemented?='{'
+        annotations+=CommentAnnotatonSL?
+        declarations+=Declaration*
+        statements+=Statement*
+    '}')?
+;

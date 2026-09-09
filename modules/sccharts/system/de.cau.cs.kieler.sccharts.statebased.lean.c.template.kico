@@ -1,0 +1,12 @@
+public system de.cau.cs.kieler.sccharts.statebased.lean.c.template
+	label "State-based Compilation (C) lean-mode (Template)"
+	start config {
+	   "de.cau.cs.kieler.sccharts.complexFinalState.createFinalRegions":false,
+	   "de.cau.cs.kieler.sccharts.statebased.lean.c.template.kico":true
+    }
+
+system de.cau.cs.kieler.sccharts.extended
+de.cau.cs.kieler.sccharts.processors.regionDependencies
+de.cau.cs.kieler.sccharts.processors.regionDependencySort
+pre process silent de.cau.cs.kieler.sccharts.processors.voRise 
+de.cau.cs.kieler.sccharts.processors.codegen.statebased.lean.c
