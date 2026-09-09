@@ -31,7 +31,7 @@ import de.cau.cs.kieler.sccharts.extensions.SCChartsTransformationExtension
 import de.cau.cs.kieler.sccharts.extensions.SCChartsTransitionExtensions
 import java.util.HashMap
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * SCCharts Abort WTO Transformation. This may require an advanced SCG compiler that can handle depth join.

@@ -36,7 +36,7 @@ import de.cau.cs.kieler.scg.processors.SCGAnnotations
 import de.cau.cs.kieler.scg.processors.SimpleGuardExpressions
 import java.util.Set
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * Smart Register Allocation

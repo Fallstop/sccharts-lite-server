@@ -3,8 +3,8 @@ package de.cau.cs.kieler.language.server.kicool.data;
 import java.util.*;
 import org.eclipse.emf.ecore.EObject;
 import de.cau.cs.kieler.kicool.environments.*;
-import de.cau.cs.kieler.kicool.diagnostics.Issue;
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 
 /** Compatible with the bundled DTO; adds structured diagnostics without removing raw messages. */
 public class SnapshotDescription {

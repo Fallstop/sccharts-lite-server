@@ -26,7 +26,7 @@ import de.cau.cs.kieler.scg.SCGraphs
 import de.cau.cs.kieler.scg.extensions.SCGControlFlowExtensions
 import de.cau.cs.kieler.scg.extensions.SCGCoreExtensions
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * 

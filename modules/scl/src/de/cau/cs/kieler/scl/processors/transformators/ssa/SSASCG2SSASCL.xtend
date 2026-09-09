@@ -38,7 +38,7 @@ import de.cau.cs.kieler.scg.processors.ssa.SSACoreExtensions
 import de.cau.cs.kieler.scl.processors.transformators.RestrictedSCG2SCL
 import java.util.Map
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.scl.SCLFactory
 import de.cau.cs.kieler.kexpressions.keffects.extensions.KEffectsExtensions
 

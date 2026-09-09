@@ -12,7 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation
 
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import com.google.common.reflect.TypeToken
 import de.cau.cs.kieler.annotations.NamedObject
 import de.cau.cs.kieler.core.properties.IProperty

@@ -40,7 +40,7 @@ import de.cau.cs.kieler.scg.processors.ssa.SSACoreExtensions
 import java.util.HashMap
 import com.google.inject.Inject
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * @author kolja

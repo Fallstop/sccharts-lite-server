@@ -20,7 +20,7 @@ import de.cau.cs.kieler.scg.SCGraph
 import de.cau.cs.kieler.scg.SCGraphs
 import de.cau.cs.kieler.scg.extensions.SCGDependencyExtensions
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.scg.Assignment
 import de.cau.cs.kieler.scg.processors.SimpleGuardExpressions
 import de.cau.cs.kieler.scg.extensions.SCGMethodExtensions

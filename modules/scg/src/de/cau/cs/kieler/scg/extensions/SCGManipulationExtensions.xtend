@@ -17,7 +17,7 @@ import com.google.inject.Inject
 import de.cau.cs.kieler.scg.Conditional
 import de.cau.cs.kieler.scg.Node
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.scg.SCGraph
 
 /**

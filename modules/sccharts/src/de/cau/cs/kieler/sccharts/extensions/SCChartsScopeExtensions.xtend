@@ -45,7 +45,7 @@ import static extension de.cau.cs.kieler.sccharts.iterators.ControlflowRegionIte
 import static extension de.cau.cs.kieler.sccharts.iterators.DataflowRegionIterator.*
 import static extension de.cau.cs.kieler.sccharts.iterators.ScopeIterator.*
 import static extension de.cau.cs.kieler.sccharts.iterators.StateIterator.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * @author ssm

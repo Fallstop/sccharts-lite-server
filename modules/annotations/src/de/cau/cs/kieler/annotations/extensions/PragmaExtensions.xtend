@@ -4,7 +4,7 @@ import de.cau.cs.kieler.annotations.Pragma
 import de.cau.cs.kieler.annotations.Pragmatable
 import de.cau.cs.kieler.annotations.StringPragma
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.annotations.AnnotationsFactory
 import java.util.List
 

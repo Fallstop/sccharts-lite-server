@@ -46,7 +46,7 @@ import static extension de.cau.cs.kieler.kicool.compilation.internal.UniqueNameC
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.addTracingProperty
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.isTracingActive
 import de.cau.cs.kieler.kicool.diagnostics.GeneratedTrace
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 
 /**
  * A compilation context is the central compilation unit. Once you prepared a context, you can

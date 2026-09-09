@@ -3,8 +3,8 @@ package de.cau.cs.kieler.scg.diagnostics;
 import java.util.*;
 import org.eclipse.emf.ecore.EObject;
 import de.cau.cs.kieler.kexpressions.keffects.Link;
-import de.cau.cs.kieler.kicool.diagnostics.Issue;
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.scg.GuardDependency;
 import de.cau.cs.kieler.scg.Node;
 

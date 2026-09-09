@@ -9,8 +9,8 @@ import org.eclipse.xtext.validation.IResourceValidator;
 import org.eclipse.xtext.util.CancelIndicator;
 import de.cau.cs.kieler.annotations.*;
 import de.cau.cs.kieler.kicool.compilation.*;
-import de.cau.cs.kieler.kicool.diagnostics.Issue;
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.language.server.kicool.data.CompilationResults;
 import de.cau.cs.kieler.sccharts.text.SCTXStandaloneSetup;
 

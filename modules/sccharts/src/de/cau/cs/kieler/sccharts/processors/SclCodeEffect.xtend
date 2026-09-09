@@ -26,7 +26,7 @@ import de.cau.cs.kieler.sccharts.extensions.SCChartsScopeExtensions
 import de.cau.cs.kieler.scl.SCLFactory
 
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.TransformationTracing.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * 

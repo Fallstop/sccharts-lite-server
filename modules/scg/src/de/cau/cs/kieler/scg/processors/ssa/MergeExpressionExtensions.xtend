@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.scg.processors.ssa
 
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import com.google.common.collect.BiMap
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
@@ -48,7 +49,7 @@ import org.eclipse.xtend.lib.annotations.Data
 import static de.cau.cs.kieler.scg.processors.ssa.SSAFunction.*
 
 import static extension com.google.common.base.Predicates.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.kexpressions.VariableDeclaration
 import de.cau.cs.kieler.kexpressions.keffects.extensions.KEffectsExtensions
 import de.cau.cs.kieler.kicool.environments.Environment
@@ -100,6 +101,7 @@ class MergeExpressionExtension {
             val copier = new Copier();
             val SCGraph copy = copier.copy(scg) as SCGraph
             copier.copyReferences();
+            SourceTrace.copied(copier)
             
             // Remove current analysis
             copy.annotations.clear

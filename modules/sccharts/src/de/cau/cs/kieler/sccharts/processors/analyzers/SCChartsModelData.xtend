@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.sccharts.processors.analyzers
 
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import com.google.inject.Inject
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsDeclarationExtensions
 import de.cau.cs.kieler.kexpressions.keffects.DataDependency
@@ -148,6 +149,7 @@ class SCChartsModelData extends AbstractModelDataCollector<SCCharts> {
         container.rootStates += main
         container.rootStates += allRootStates.filter[rootState !== it].map[copier.copy(it) as State]
         copier.copyReferences()
+        SourceTrace.copied(copier)
         
         // Perfom Dependency Analysis
         val depProcessor = KiCoolRegistration.getProcessorInstance(RegionDependencies.ID) as RegionDependencies

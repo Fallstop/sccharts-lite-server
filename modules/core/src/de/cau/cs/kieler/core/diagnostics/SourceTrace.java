@@ -1,4 +1,4 @@
-package de.cau.cs.kieler.kicool.diagnostics;
+package de.cau.cs.kieler.core.diagnostics;
 
 import java.util.*;
 import org.eclipse.emf.ecore.EObject;

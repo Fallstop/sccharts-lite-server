@@ -328,9 +328,11 @@ public class TransformationTracing {
     public static <T extends EObject> T tracedCopy(final T original) {
         TracingMapping mapping = tracingMappings.get(Thread.currentThread());
         if (mapping != null) {
-            return mapping.mappedCopy(original);
+            T copy = mapping.mappedCopy(original);
+            de.cau.cs.kieler.core.diagnostics.SourceTrace.copied(copy, original);
+            return copy;
         } else {
-            return EcoreUtil.copy(original);
+            return de.cau.cs.kieler.core.diagnostics.SourceTrace.copy(original);
         }
     }
 
@@ -389,7 +391,7 @@ public class TransformationTracing {
      */
     public static <T extends EObject> T trace(final T eObject, final EObject origin) {
         // Diagnostics provenance is recorded whether or not the tracing engine is active.
-        de.cau.cs.kieler.kicool.diagnostics.SourceTrace.copied(eObject, origin);
+        de.cau.cs.kieler.core.diagnostics.SourceTrace.copied(eObject, origin);
         Thread t = Thread.currentThread();
         TracingMapping mapping = tracingMappings.get(t);
         if (mapping != null) {

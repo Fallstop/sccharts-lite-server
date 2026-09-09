@@ -20,7 +20,7 @@ import de.cau.cs.kieler.scg.Conditional
 import de.cau.cs.kieler.scg.SCGraph
 import de.cau.cs.kieler.scg.SCGraphs
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import com.google.inject.Inject
 import de.cau.cs.kieler.scg.extensions.SCGMethodExtensions
 

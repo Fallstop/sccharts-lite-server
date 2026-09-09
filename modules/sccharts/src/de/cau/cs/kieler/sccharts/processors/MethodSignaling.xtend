@@ -46,7 +46,7 @@ import de.cau.cs.kieler.scl.Return
 import de.cau.cs.kieler.scl.SCLFactory
 import de.cau.cs.kieler.scl.StatementContainer
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * Transforms convenience access of method invocation and active states into signal-like variables.

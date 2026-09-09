@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.kexpressions.extensions
 
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import java.util.Collection
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.util.EcoreUtil
@@ -35,7 +36,7 @@ class EcoreUtilExtensions {
      * @see Copier
      */
     def <T extends EObject> T copy(T eObject) {
-        return EcoreUtil.copy(eObject)
+        return SourceTrace.copy(eObject)
     }
 
     /**

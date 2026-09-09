@@ -25,7 +25,7 @@ import de.cau.cs.kieler.scg.Entry
 import java.util.List
 import de.cau.cs.kieler.scg.extensions.SCGCoreExtensions
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.kicool.compilation.InplaceProcessor
 import de.cau.cs.kieler.scg.SCGraphs
 import de.cau.cs.kieler.scg.processors.analyzer.ThreadAnalyzer

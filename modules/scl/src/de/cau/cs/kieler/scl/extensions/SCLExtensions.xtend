@@ -13,6 +13,7 @@
  */
 package de.cau.cs.kieler.scl.extensions
 
+import de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil
 import com.google.inject.Inject
 import de.cau.cs.kieler.kexpressions.Declaration
 import de.cau.cs.kieler.kexpressions.ValuedObject
@@ -35,7 +36,7 @@ import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.util.EcoreUtil
 
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.TransformationTracing.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * @author ssm, krat
@@ -106,7 +107,7 @@ class SCLExtensions {
      def removeSuperfluousGotosAndLabels(Scope scope) {
          var Scope oldSseq
         do {
-            oldSseq = EcoreUtil.copy(scope)
+            oldSseq = TracedEcoreUtil.copy(scope)
             scope.optimizeLabels
             scope.removeSuperfluousGotos
         } while (!EcoreUtil.equals(oldSseq, scope))
@@ -269,7 +270,7 @@ class SCLExtensions {
     def Scope removeUnreachableCodeAndLabels(Scope scope) {
         var Scope oldSseq
         do {
-            oldSseq = EcoreUtil.copy(scope)
+            oldSseq = TracedEcoreUtil.copy(scope)
             scope.optimizeLabels
             scope.removeUnreachableCode
         } while (!EcoreUtil.equals(oldSseq, scope))
@@ -286,7 +287,7 @@ class SCLExtensions {
     def Scope optimizeAll(Scope scope) {
         var Scope oldScope
         do {
-            oldScope = EcoreUtil.copy(scope)
+            oldScope = TracedEcoreUtil.copy(scope)
             scope.removeSuperfluousGotos
             scope.optimizeLabels
             scope.removeUnreachableCode

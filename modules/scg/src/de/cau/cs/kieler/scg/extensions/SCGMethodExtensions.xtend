@@ -13,6 +13,7 @@
  */
 package de.cau.cs.kieler.scg.extensions
 
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.IntAnnotation
 import de.cau.cs.kieler.annotations.ReferenceAnnotation
@@ -140,6 +141,7 @@ class SCGMethodExtensions {
             val copier = new Copier
             val newSCG = copier.copy(scg) as SCGraph
             copier.copyReferences
+            SourceTrace.copied(copier)
             
             // Fix references to outside VOs
             for (entry : copier.entrySet.filter[key instanceof ValuedObjectReference]) {

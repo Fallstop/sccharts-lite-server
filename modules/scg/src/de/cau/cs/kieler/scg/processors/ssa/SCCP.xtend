@@ -57,7 +57,7 @@ import static de.cau.cs.kieler.kexpressions.keffects.DataDependencyType.*
 import static de.cau.cs.kieler.scg.processors.ssa.SSAFunction.*
 import static de.cau.cs.kieler.scg.processors.ssa.SSAParameterProperty.*
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * The Sparse Conditional Constant Propagation for SCGs.

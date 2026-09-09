@@ -12,7 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation.internal
 
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import de.cau.cs.kieler.kexpressions.KExpressionsFactory
 import de.cau.cs.kieler.kicool.ProcessorEntry
 import de.cau.cs.kieler.kicool.ProcessorGroup
@@ -24,7 +24,7 @@ import de.cau.cs.kieler.kicool.registration.KiCoolRegistration
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.util.EcoreUtil.Copier
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * Internal class that creates the working copy of the system.

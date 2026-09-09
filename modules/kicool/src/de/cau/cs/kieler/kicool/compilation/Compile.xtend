@@ -20,7 +20,7 @@ import java.util.List
 import static com.google.common.base.Preconditions.*
 import static extension de.cau.cs.kieler.kicool.compilation.internal.ContextPopulation.*
 import static extension de.cau.cs.kieler.kicool.compilation.internal.SystemTransformation.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.kicool.KiCoolFactory
 import de.cau.cs.kieler.kicool.ProcessorGroup
 import de.cau.cs.kieler.kicool.compilation.internal.EnvironmentPropertyHolder

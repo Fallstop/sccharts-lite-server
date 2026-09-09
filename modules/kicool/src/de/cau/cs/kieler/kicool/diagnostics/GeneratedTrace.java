@@ -1,6 +1,8 @@
 package de.cau.cs.kieler.kicool.diagnostics;
 
 import java.util.*;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.kicool.compilation.CompilationContext;
 import de.cau.cs.kieler.kicool.compilation.codegen.CodeGeneratorModule;
 

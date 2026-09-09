@@ -29,7 +29,7 @@ import de.cau.cs.kieler.sccharts.Transition
 import java.util.Set
 
 //import static extension de.cau.cs.kieler.kicool.kitt.tracing.TracingEcoreUtil.*
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.sccharts.extensions.SCChartsControlflowRegionExtensions
 import de.cau.cs.kieler.sccharts.extensions.SCChartsStateExtensions
 import de.cau.cs.kieler.sccharts.extensions.SCChartsTransitionExtensions

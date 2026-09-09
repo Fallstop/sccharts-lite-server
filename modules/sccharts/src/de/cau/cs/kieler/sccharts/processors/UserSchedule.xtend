@@ -48,7 +48,7 @@ import java.util.LinkedList
 import java.util.List
 import org.eclipse.emf.ecore.EObject
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * 

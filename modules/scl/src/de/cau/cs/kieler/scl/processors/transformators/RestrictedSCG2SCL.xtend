@@ -35,7 +35,7 @@ import de.cau.cs.kieler.scl.extensions.SCLExtensions
 import de.cau.cs.kieler.scl.Goto
 import de.cau.cs.kieler.scl.SCLProgram
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.scl.Label
 import de.cau.cs.kieler.scl.Scope
 import de.cau.cs.kieler.kicool.compilation.Processor

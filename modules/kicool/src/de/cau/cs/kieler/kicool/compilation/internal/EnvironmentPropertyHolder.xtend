@@ -33,7 +33,7 @@ import org.eclipse.emf.ecore.util.EcoreUtil.Copier
 
 import static de.cau.cs.kieler.kicool.environments.Environment.*
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import java.util.Set
 
 /**

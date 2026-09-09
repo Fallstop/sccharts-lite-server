@@ -13,7 +13,7 @@
  */
 package de.cau.cs.kieler.kicool.kitt.tracing.internal;
 
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import com.google.inject.Binder
 import com.google.inject.Module
 import de.cau.cs.kieler.kexpressions.extensions.EcoreUtilExtensions

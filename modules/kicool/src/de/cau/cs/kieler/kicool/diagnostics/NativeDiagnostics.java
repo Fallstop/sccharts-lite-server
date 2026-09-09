@@ -4,6 +4,8 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import java.util.regex.*;
 import de.cau.cs.kieler.kicool.compilation.Processor;
 import de.cau.cs.kieler.kicool.deploy.Logger;

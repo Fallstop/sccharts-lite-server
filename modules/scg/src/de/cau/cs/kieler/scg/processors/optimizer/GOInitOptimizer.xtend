@@ -31,7 +31,7 @@ import de.cau.cs.kieler.scg.ScgFactory
 import de.cau.cs.kieler.scg.extensions.SCGControlFlowExtensions
 import de.cau.cs.kieler.scg.processors.SimpleGuardExpressions
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /** 
  * @author ssm

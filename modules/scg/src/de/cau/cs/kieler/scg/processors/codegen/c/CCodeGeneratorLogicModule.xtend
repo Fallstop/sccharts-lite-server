@@ -51,7 +51,7 @@ import java.util.Deque
 import java.util.List
 import org.eclipse.xtend.lib.annotations.Accessors
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * C Code Generator Logic Module

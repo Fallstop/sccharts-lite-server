@@ -37,7 +37,7 @@ import org.eclipse.emf.ecore.EObject
 
 import static de.cau.cs.kieler.kicool.compilation.VariableStore.*
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * Persistent State Optimizer

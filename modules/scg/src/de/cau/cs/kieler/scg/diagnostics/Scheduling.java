@@ -2,8 +2,8 @@ package de.cau.cs.kieler.scg.diagnostics;
 
 import java.util.*;
 import de.cau.cs.kieler.kicool.compilation.Processor;
-import de.cau.cs.kieler.kicool.diagnostics.Issue;
-import de.cau.cs.kieler.kicool.diagnostics.SourceTrace;
+import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.kexpressions.keffects.*;
 import de.cau.cs.kieler.scg.*;
 

@@ -41,7 +41,7 @@ import java.util.EnumSet
 import java.util.List
 import java.util.Map
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * The SCG Extensions are a collection of common methods for SCG queries and manipulation.

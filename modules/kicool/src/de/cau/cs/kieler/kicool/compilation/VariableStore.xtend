@@ -35,7 +35,7 @@ import org.eclipse.xtend.lib.annotations.ToString
 
 import static de.cau.cs.kieler.kexpressions.KExpressionsPackage.*
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 
 /**
  * @author als

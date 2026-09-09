@@ -17,7 +17,7 @@ import de.cau.cs.kieler.scg.Assignment
 import de.cau.cs.kieler.scg.Conditional
 import de.cau.cs.kieler.scg.SCGraph
 
-import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
+import static extension de.cau.cs.kieler.core.diagnostics.TracedEcoreUtil.*
 import de.cau.cs.kieler.scg.Node
 import org.eclipse.emf.ecore.EObject
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsValuedObjectExtensions

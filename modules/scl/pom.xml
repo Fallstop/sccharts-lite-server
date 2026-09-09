@@ -5,6 +5,7 @@
   <parent><groupId>de.cau.cs.kieler.lite</groupId><artifactId>parent</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent>
   <artifactId>scl</artifactId>
   <dependencies>
+    <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>core</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kexpressions</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kicool</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>scg</artifactId><version>${project.version}</version></dependency>
