@@ -64,7 +64,6 @@ import org.eclipse.elk.graph.properties.Property
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.jface.viewers.ISelectionChangedListener
 import org.eclipse.jface.viewers.SelectionChangedEvent
-import org.eclipse.ui.progress.UIJob
 
 import static extension com.google.common.base.Predicates.*
 import static extension de.cau.cs.kieler.klighd.syntheses.DiagramSyntheses.*
@@ -217,28 +216,21 @@ class SCGDependencyHook extends SynthesisHook {
     				override protected run(IProgressMonitor monitor) {
     					val newLoopElements = calculateSCGDependencyEdges(rootNode, scc, tracker, attachNode);
     
-    					// This part should be synchronized with the ui
-    					new UIJob(JOB_NAME) {
-    
-    						override runInUIThread(IProgressMonitor monitor) {
-    							if (rootNode.getProperty(DEPENDENCY_EDGES) === null) {
-    								rootNode.setProperty(DEPENDENCY_EDGES, newLoopElements);
-    								val viewer = context.viewer;
-    								newLoopElements.entries.forEach [
-        									it.value.source = attachNode
-        									it.value.target = attachNode
-    									if (it.key != type) {
-    										it.value.initiallyHide;
-    										viewer?.hide(it.value);
-    									}
-    								];
-    								// Re layout to place edges correctly
-    								new LightDiagramLayoutConfig(context).performLayout
+    					// Headless: there is no UI thread to synchronize with, apply the edges directly.
+    					if (rootNode.getProperty(DEPENDENCY_EDGES) === null) {
+    						rootNode.setProperty(DEPENDENCY_EDGES, newLoopElements);
+    						val viewer = context.viewer;
+    						newLoopElements.entries.forEach [
+    							it.value.source = attachNode
+    							it.value.target = attachNode
+    							if (it.key != type) {
+    								it.value.initiallyHide;
+    								viewer?.hide(it.value);
     							}
-    							return Status.OK_STATUS;
-    						}
-    
-    					}.schedule
+    						];
+    						// Re layout to place edges correctly
+    						new LightDiagramLayoutConfig(context).performLayout
+    					}
     					return Status.OK_STATUS;
     				}
     

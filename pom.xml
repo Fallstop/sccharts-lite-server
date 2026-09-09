@@ -67,7 +67,13 @@
       <dependency><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.common</artifactId><version>2.40.0</version></dependency>
       <dependency><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.ecore.xmi</artifactId><version>2.38.0</version></dependency>
       <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.runtime</artifactId><version>3.32.0</version></dependency>
-      <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.resources</artifactId><version>3.21.0</version></dependency>
+      <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.resources</artifactId><version>3.21.0</version>
+        <exclusions>
+          <!-- Native file-system helpers for every platform; unused outside an Eclipse workspace. -->
+          <exclusion><groupId>net.java.dev.jna</groupId><artifactId>jna</artifactId></exclusion>
+          <exclusion><groupId>net.java.dev.jna</groupId><artifactId>jna-platform</artifactId></exclusion>
+        </exclusions>
+      </dependency>
       <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.equinox.common</artifactId><version>3.19.200</version></dependency>
       <dependency><groupId>org.eclipse.lsp4j</groupId><artifactId>org.eclipse.lsp4j</artifactId><version>${lsp4j-version}</version></dependency>
       <dependency><groupId>org.eclipse.lsp4j</groupId><artifactId>org.eclipse.lsp4j.jsonrpc</artifactId><version>${lsp4j-version}</version></dependency>
@@ -87,16 +93,36 @@
           <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.jface</artifactId></exclusion>
           <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.ui</artifactId></exclusion>
           <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.ui.workbench</artifactId></exclusion>
-          <exclusion><groupId>org.eclipse.elk</groupId><artifactId>org.eclipse.elk.core.service</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.e4.ui.css.core</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.edit</artifactId></exclusion>
         </exclusions>
       </dependency>
       <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.ide</artifactId><version>${klighd-version}</version></dependency>
-      <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.setup</artifactId><version>${klighd-version}</version></dependency>
+      <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.setup</artifactId><version>${klighd-version}</version>
+        <exclusions>
+          <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.ui.workbench</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.e4.ui.css.core</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.edit</artifactId></exclusion>
+        </exclusions>
+      </dependency>
+      <!-- KLighD lays out through ELK's DiagramLayoutEngine, so this stays; its pom's Eclipse workbench dependencies do not. -->
+      <dependency><groupId>org.eclipse.elk</groupId><artifactId>org.eclipse.elk.core.service</artifactId><version>${elk-version}</version>
+        <exclusions>
+          <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.e4.ui.css.core</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.ui.workbench</artifactId></exclusion>
+          <exclusion><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.edit</artifactId></exclusion>
+        </exclusions>
+      </dependency>
       <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.kgraph</artifactId><version>${klighd-version}</version></dependency>
       <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.krendering</artifactId><version>${klighd-version}</version></dependency>
       <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.krendering.extensions</artifactId><version>${klighd-version}</version></dependency>
       <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.kgraph.text</artifactId><version>${klighd-version}</version></dependency>
-      <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.lsp</artifactId><version>${klighd-version}</version></dependency>
+      <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.lsp</artifactId><version>${klighd-version}</version>
+        <exclusions>
+          <!-- sprotty-server declares the whole Jakarta EE API set; the server uses none of it. -->
+          <exclusion><groupId>jakarta.platform</groupId><artifactId>jakarta.jakartaee-api</artifactId></exclusion>
+        </exclusions>
+      </dependency>
       <dependency><groupId>de.cau.cs.kieler.swt.mock</groupId><artifactId>org.eclipse.swt</artifactId><version>${swt-mock-version}</version></dependency>
       <dependency><groupId>de.cau.cs.kieler.swt.mock</groupId><artifactId>org.eclipse.jface</artifactId><version>${swt-mock-version}</version></dependency>
       <dependency><groupId>de.cau.cs.kieler.swt.mock</groupId><artifactId>org.eclipse.ui</artifactId><version>${swt-mock-version}</version></dependency>

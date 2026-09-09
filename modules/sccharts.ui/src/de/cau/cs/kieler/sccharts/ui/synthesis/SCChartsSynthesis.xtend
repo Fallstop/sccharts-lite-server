@@ -48,7 +48,6 @@ import org.eclipse.elk.alg.force.options.StressOptions
 import org.eclipse.elk.alg.layered.InteractiveLayeredGraphVisitor
 import org.eclipse.elk.alg.rectpacking.InteractiveRectPackingGraphVisitor
 import org.eclipse.elk.core.options.CoreOptions
-import org.eclipse.elk.core.service.util.CompoundGraphElementVisitor
 import org.eclipse.elk.core.util.IGraphElementVisitor
 
 import static de.cau.cs.kieler.sccharts.ui.synthesis.GeneralSynthesisOptions.*
@@ -295,9 +294,9 @@ class SCChartsSynthesis extends AbstractDiagramSynthesis<SCCharts> {
         // Add interactive Layout run.
         if (!viewModel.getChildren().isEmpty() && (viewModel.getChildren().get(0)
                         .getProperty(CoreOptions.INTERACTIVE_LAYOUT) || isChildInteractive(viewModel))) {
-            additionalLayoutRuns.add(new CompoundGraphElementVisitor(
-                    new InteractiveRectPackingGraphVisitor(),
-                    new InteractiveLayeredGraphVisitor()));
+            // ELK's CompoundGraphElementVisitor lives in the Eclipse-bound elk.core.service bundle.
+            additionalLayoutRuns.add(new InteractiveRectPackingGraphVisitor());
+            additionalLayoutRuns.add(new InteractiveLayeredGraphVisitor());
         }
         return additionalLayoutRuns;
     }

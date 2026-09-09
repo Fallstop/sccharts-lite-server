@@ -1,0 +1,103 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< de.cau.cs.kieler.lite:sccharts-lite-server >-------------
+[INFO] Building sccharts-lite-server 0.1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- dependency:3.7.0:tree (default-cli) @ sccharts-lite-server ---
+[INFO] de.cau.cs.kieler.lite:sccharts-lite-server:jar:0.1.0-SNAPSHOT
+[INFO] \- de.cau.cs.kieler.lite:language.server:jar:0.1.0-SNAPSHOT:compile
+[INFO]    +- de.cau.cs.kieler.lite:core:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- com.google.guava:guava:jar:33.3.1-jre:compile
+[INFO]    |  |  +- com.google.guava:failureaccess:jar:1.0.2:compile
+[INFO]    |  |  +- com.google.guava:listenablefuture:jar:9999.0-empty-to-avoid-conflict-with-guava:compile
+[INFO]    |  |  +- com.google.code.findbugs:jsr305:jar:3.0.2:compile
+[INFO]    |  |  +- org.checkerframework:checker-qual:jar:3.43.0:compile
+[INFO]    |  |  \- com.google.j2objc:j2objc-annotations:jar:3.0.0:compile
+[INFO]    |  +- org.eclipse.xtend:org.eclipse.xtend.lib.macro:jar:2.37.0:compile
+[INFO]    |  \- org.eclipse.emf:org.eclipse.emf.ecore:jar:2.40.0:compile
+[INFO]    +- de.cau.cs.kieler.lite:kicool:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.lite:annotations:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  |  \- org.eclipse.xtext:org.eclipse.xtext.common.types:jar:2.37.0:compile
+[INFO]    |  |     +- org.ow2.asm:asm:jar:9.7.1:compile
+[INFO]    |  |     \- io.github.classgraph:classgraph:jar:4.8.179:compile
+[INFO]    |  +- de.cau.cs.kieler.lite:kexpressions:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- org.eclipse.xtext:org.eclipse.xtext.util:jar:2.37.0:compile
+[INFO]    |  +- org.antlr:antlr-runtime:jar:3.2:compile
+[INFO]    |  |  \- org.antlr:stringtemplate:jar:3.2:compile
+[INFO]    |  |     \- antlr:antlr:jar:2.7.7:compile
+[INFO]    |  \- org.eclipse.platform:org.eclipse.core.resources:jar:3.21.0:compile
+[INFO]    |     +- org.eclipse.platform:org.eclipse.core.expressions:jar:3.9.400:compile
+[INFO]    |     \- org.eclipse.platform:org.eclipse.core.filesystem:jar:1.11.0:compile
+[INFO]    +- de.cau.cs.kieler.lite:kicool.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd:jar:3.1.0.v20250428:compile
+[INFO]    |  +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.ide:jar:3.1.0.v20250428:compile
+[INFO]    |  |  \- org.eclipse.xtext:org.eclipse.xtext.xbase:jar:2.37.0:compile
+[INFO]    |  +- org.eclipse.elk:org.eclipse.elk.alg.common:jar:0.11.0:compile
+[INFO]    |  +- org.eclipse.elk:org.eclipse.elk.core:jar:0.11.0:compile
+[INFO]    |  \- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.setup:jar:3.1.0.v20250428:compile
+[INFO]    +- de.cau.cs.kieler.lite:kicool.ui:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.lite:annotations.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.lite:kexpressions.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.krendering.extensions:jar:3.1.0.v20250428:compile
+[INFO]    |  +- de.cau.cs.kieler.swt.mock:org.eclipse.ui:jar:0.1.0:compile
+[INFO]    |  \- de.cau.cs.kieler.klighd:de.cau.cs.kieler.kgraph.text:jar:3.1.0.v20250428:compile
+[INFO]    +- de.cau.cs.kieler.lite:sccharts:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.lite:scl:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- org.eclipse.emf:org.eclipse.emf.common:jar:2.40.0:compile
+[INFO]    |  +- commons-logging:commons-logging:jar:1.3.4:compile
+[INFO]    |  \- org.eclipse.elk:org.eclipse.elk.graph:jar:0.11.0:compile
+[INFO]    +- de.cau.cs.kieler.lite:sccharts.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  \- de.cau.cs.kieler.lite:scl.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    +- de.cau.cs.kieler.lite:sccharts.ui:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.kgraph:jar:3.1.0.v20250428:compile
+[INFO]    |  +- org.eclipse.elk:org.eclipse.elk.alg.force:jar:0.11.0:compile
+[INFO]    |  +- de.cau.cs.kieler.swt.mock:org.eclipse.jface:jar:0.1.0:compile
+[INFO]    |  \- de.cau.cs.kieler.swt.mock:org.eclipse.swt:jar:0.1.0:compile
+[INFO]    +- de.cau.cs.kieler.lite:scg:jar:0.1.0-SNAPSHOT:compile
+[INFO]    |  \- org.eclipse.emf:org.eclipse.emf.ecore.xmi:jar:2.38.0:compile
+[INFO]    +- de.cau.cs.kieler.lite:scg.klighd:jar:0.1.0-SNAPSHOT:compile
+[INFO]    +- de.cau.cs.kieler.lite:simulation:jar:0.1.0-SNAPSHOT:compile
+[INFO]    +- de.cau.cs.kieler.lite:simulation.ide:jar:0.1.0-SNAPSHOT:compile
+[INFO]    +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.lsp:jar:3.1.0.v20250428:compile
+[INFO]    |  +- de.cau.cs.kieler.klighd:de.cau.cs.kieler.klighd.krendering:jar:3.1.0.v20250428:compile
+[INFO]    |  +- org.eclipse.lsp4j:org.eclipse.lsp4j.generator:jar:0.23.1:compile
+[INFO]    |  +- org.eclipse.sprotty:org.eclipse.sprotty.xtext:jar:1.2.0:compile
+[INFO]    |  |  \- org.eclipse.sprotty:org.eclipse.sprotty.server:jar:1.2.0:compile
+[INFO]    |  \- org.eclipse.sprotty:org.eclipse.sprotty.layout:jar:1.2.0:compile
+[INFO]    |     \- org.eclipse.sprotty:org.eclipse.sprotty:jar:1.2.0:compile
+[INFO]    |        \- log4j:log4j:jar:1.2.17:compile
+[INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.layered:jar:0.11.0:compile
+[INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.mrtree:jar:0.11.0:compile
+[INFO]    +- org.eclipse.elk:org.eclipse.elk.alg.rectpacking:jar:0.11.0:compile
+[INFO]    +- org.eclipse.xtext:org.eclipse.xtext:jar:2.37.0:compile
+[INFO]    |  \- org.eclipse.platform:org.eclipse.osgi:jar:3.18.300:compile
+[INFO]    +- org.eclipse.xtext:org.eclipse.xtext.ide:jar:2.37.0:compile
+[INFO]    |  \- org.eclipse.emf:org.eclipse.emf.ecore.change:jar:2.14.0:compile
+[INFO]    +- org.eclipse.xtext:org.eclipse.xtext.xbase.lib:jar:2.37.0:compile
+[INFO]    +- org.eclipse.xtend:org.eclipse.xtend.lib:jar:2.37.0:compile
+[INFO]    +- com.google.code.gson:gson:jar:2.11.0:compile
+[INFO]    |  \- com.google.errorprone:error_prone_annotations:jar:2.27.0:compile
+[INFO]    +- com.google.inject:guice:jar:7.0.0:compile
+[INFO]    |  +- jakarta.inject:jakarta.inject-api:jar:2.0.1:compile
+[INFO]    |  \- aopalliance:aopalliance:jar:1.0:compile
+[INFO]    +- ch.qos.reload4j:reload4j:jar:1.2.26:compile
+[INFO]    +- org.eclipse.lsp4j:org.eclipse.lsp4j:jar:0.23.1:compile
+[INFO]    +- org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:jar:0.23.1:compile
+[INFO]    +- org.eclipse.platform:org.eclipse.core.runtime:jar:3.32.0:compile
+[INFO]    |  +- org.eclipse.platform:org.eclipse.core.jobs:jar:3.15.400:compile
+[INFO]    |  +- org.eclipse.platform:org.eclipse.equinox.registry:jar:3.12.200:compile
+[INFO]    |  +- org.eclipse.platform:org.eclipse.equinox.preferences:jar:3.11.200:compile
+[INFO]    |  |  \- org.osgi:org.osgi.service.prefs:jar:1.1.2:compile
+[INFO]    |  |     \- org.osgi:osgi.annotation:jar:8.0.1:compile
+[INFO]    |  +- org.eclipse.platform:org.eclipse.core.contenttype:jar:3.9.600:compile
+[INFO]    |  \- org.eclipse.platform:org.eclipse.equinox.app:jar:1.7.200:compile
+[INFO]    +- org.eclipse.platform:org.eclipse.equinox.common:jar:3.19.200:compile
+[INFO]    \- org.freemarker:freemarker:jar:2.3.34:compile
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  0.771 s
+[INFO] Finished at: 2026-09-09T22:07:36+12:00
+[INFO] ------------------------------------------------------------------------
