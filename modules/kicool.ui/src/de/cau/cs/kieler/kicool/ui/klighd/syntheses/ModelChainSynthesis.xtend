@@ -32,7 +32,6 @@ import de.cau.cs.kieler.klighd.krendering.extensions.KNodeExtensions
 import de.cau.cs.kieler.klighd.krendering.extensions.KPolylineExtensions
 import de.cau.cs.kieler.klighd.krendering.extensions.KRenderingExtensions
 import de.cau.cs.kieler.klighd.syntheses.AbstractDiagramSynthesis
-import de.cau.cs.kieler.klighd.ui.view.DiagramView
 import de.cau.cs.kieler.klighd.util.KlighdProperties
 import de.cau.cs.kieler.klighd.util.KlighdSynthesisProperties
 import com.google.inject.Inject
@@ -173,18 +172,9 @@ class ModelChainSynthesis extends AbstractDiagramSynthesis<ModelChain> {
         try {
             val properties = new KlighdSynthesisProperties();
             properties.setProperty(KlighdSynthesisProperties.REQUESTED_UPDATE_STRATEGY, SimpleUpdateStrategy.ID);
-            val viewpart = usedContext.diagramWorkbenchPart;
-            if (viewpart instanceof DiagramView) {
-                val synthesisID = (viewpart as DiagramView).synthesisSelectionMenu.getSynthesis(model);
-                properties.setProperty(KlighdSynthesisProperties.REQUESTED_DIAGRAM_SYNTHESIS, synthesisID);
-                val subDiagramViewContext = LightDiagramServices::translateModel2(model, usedContext, properties);
-                usedContext.addChildViewContext(subDiagramViewContext)
-                subDiagramNode = subDiagramViewContext.viewModel;
-            } else {
-                val subDiagramViewContext = LightDiagramServices::translateModel2(model, usedContext, properties);
-                usedContext.addChildViewContext(subDiagramViewContext)
-                subDiagramNode = subDiagramViewContext.viewModel;
-            }
+            val subDiagramViewContext = LightDiagramServices::translateModel2(model, usedContext, properties);
+            usedContext.addChildViewContext(subDiagramViewContext)
+            subDiagramNode = subDiagramViewContext.viewModel;
         } catch (Exception e) {
             // fallthrou
         }

@@ -23,7 +23,6 @@ import de.cau.cs.kieler.kexpressions.kext.DeclarationScope
 import de.cau.cs.kieler.kicool.compilation.CompilationContext
 import de.cau.cs.kieler.kicool.compilation.Compile
 import de.cau.cs.kieler.kicool.ide.klighd.KiCoDiagramViewProperties
-import de.cau.cs.kieler.kicool.ui.view.CompilerViewPartListener
 import de.cau.cs.kieler.klighd.IAction
 import de.cau.cs.kieler.klighd.kgraph.KEdge
 import de.cau.cs.kieler.klighd.kgraph.KGraphElement
@@ -33,9 +32,6 @@ import de.cau.cs.kieler.sccharts.SCCharts
 import org.eclipse.elk.graph.properties.IProperty
 import org.eclipse.elk.graph.properties.Property
 import org.eclipse.emf.ecore.EObject
-import org.eclipse.xtext.resource.XtextResource
-import org.eclipse.xtext.ui.editor.XtextEditor
-import org.eclipse.xtext.util.concurrent.IUnitOfWork
 
 import static extension org.eclipse.emf.ecore.util.EcoreUtil.*
 
@@ -126,19 +122,8 @@ class ToggleDependencyAction implements IAction {
     }
     
     private def updateEditor(EObject model) {
-        val editor = CompilerViewPartListener.activeEditor
-        
-        if (editor instanceof XtextEditor) {
-            val doc = editor.getDocument
-            
-            doc.modify(new IUnitOfWork<EObject, XtextResource>() {
-                override exec(XtextResource state) throws Exception {
-                    state.contents.clear
-                    state.contents += model
-                    model
-                }
-            });  
-        }            
+        // Without an Eclipse editor there is nothing to write the modified model back into.
+        // The language server client re-reads the model from the file.
     }
     
     var autoCounter = 0

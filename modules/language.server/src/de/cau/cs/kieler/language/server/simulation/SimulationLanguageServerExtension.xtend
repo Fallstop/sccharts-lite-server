@@ -41,7 +41,6 @@ import de.cau.cs.kieler.simulation.events.SimulationEvent
 import de.cau.cs.kieler.simulation.events.TraceFinishedEvent
 import de.cau.cs.kieler.simulation.events.TraceMismatchEvent
 import de.cau.cs.kieler.simulation.ide.CentralSimulation
-import de.cau.cs.kieler.simulation.ide.server.SimulationServer
 import de.cau.cs.kieler.simulation.mode.DynamicTickMode
 import de.cau.cs.kieler.simulation.mode.ManualMode
 import de.cau.cs.kieler.simulation.mode.PeriodicMode
@@ -174,7 +173,6 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
         val sim = resultArray.last()
         if (sim instanceof SimulationContext) {
             prepareSimulation(sim as SimulationContext)
-            SimulationServer.start
             // Add user value processor
             val root = currentSimulation.system.processors as ProcessorGroup
             root.processors.add(0, KiCoolFactory.eINSTANCE.createProcessorReference => [
@@ -229,7 +227,6 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
             // Stop the running simulation and remove listeners
             stopAndRemoveSimulation
             removeListener(this)
-            SimulationServer.stop()
             stepNumber = -1
             currentlySimulatedModel = null
         } catch (Exception e) {
@@ -428,7 +425,8 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
     }
     
     override startVisualizationServer() {
-        SimulationServer.start
+        // The KiVis visualization server is not part of this build.
+        sendError("The simulation visualization server is not available in this server build.")
     }
 
 }

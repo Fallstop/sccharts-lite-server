@@ -14,8 +14,6 @@ package de.cau.cs.kieler.sccharts.ui.synthesis
 
 import de.cau.cs.kieler.klighd.IKlighdStartupHook
 import de.cau.cs.kieler.klighd.KlighdDataManager
-import de.cau.cs.kieler.sccharts.ui.debug.actions.SetBreakpointAction
-import de.cau.cs.kieler.sccharts.ui.debug.actions.SetCheckBreakpointAction
 import de.cau.cs.kieler.sccharts.ui.synthesis.actions.ReferenceExpandAction
 import de.cau.cs.kieler.sccharts.ui.synthesis.hooks.LabelShorteningHook
 import de.cau.cs.kieler.sccharts.ui.synthesis.hooks.LayoutHook
@@ -45,8 +43,6 @@ class SCChartsKlighdSetup implements IKlighdStartupHook {
             .registerAction(CollapseAllRegionsAction.ID, new CollapseAllRegionsAction)
             .registerAction(ExpandAllRegionsAction.ID, new ExpandAllRegionsAction)
             .registerAction(ToggleDependencyAction.ID, new ToggleDependencyAction)
-            .registerAction(SetBreakpointAction.ID, new SetBreakpointAction)
-            .registerAction(SetCheckBreakpointAction.ID, new SetCheckBreakpointAction)
     }
     
 }

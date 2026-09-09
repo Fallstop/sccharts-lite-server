@@ -13,7 +13,7 @@
 package de.cau.cs.kieler.kicool.ui.synthesis.actions
 
 import org.eclipse.xtend.lib.annotations.Data
-import de.cau.cs.kieler.kicool.ui.view.CompilerView
+
 import de.cau.cs.kieler.kicool.compilation.CompilationContext
 import de.cau.cs.kieler.klighd.kgraph.KNode
 
@@ -29,7 +29,7 @@ class IntermediateData {
     de.cau.cs.kieler.kicool.compilation.Processor<?,?> processor
     CompilationContext compilationContext
     Object model
-    CompilerView view
+    Object view
     int intermediateIndex
     KNode parentNode
 }

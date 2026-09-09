@@ -17,7 +17,8 @@ import de.cau.cs.kieler.core.ls.IHighlighting
 import de.cau.cs.kieler.core.services.KielerServiceLoader
 import de.cau.cs.kieler.klighd.lsp.launch.AbstractRegistrationLanguageServerExtension
 import de.cau.cs.kieler.klighd.lsp.launch.Language
-import de.cau.cs.kieler.pragmatics.language.server.PragmaticsRegistrationLanguageServerExtension
+import java.util.ArrayList
+import java.util.List
 
 /**
  * Extends the language server with support for the KGraph and Elk Graph languages and all available classes
@@ -26,10 +27,10 @@ import de.cau.cs.kieler.pragmatics.language.server.PragmaticsRegistrationLanguag
  * @author sdo, nre
  */
  @Singleton
-class RegistrationLanguageServerExtension extends PragmaticsRegistrationLanguageServerExtension {
+class RegistrationLanguageServerExtension extends AbstractRegistrationLanguageServerExtension {
     
-    override getLanguageExtensions() {
-        val languages = super.getLanguageExtensions
+    override List<Language> getLanguageExtensions() {
+        val languages = new ArrayList<Language>
         for (highlighting : KielerServiceLoader.load(IHighlighting)) {
         	languages.add(new Language(highlighting.getId, highlighting.name, highlighting.keywords))
         }

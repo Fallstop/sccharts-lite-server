@@ -25,8 +25,8 @@ const MODULES = {
   'simulation.ide': ['org.eclipse.xtext.ide', 'simulation', 'kicool', 'gson', 'org.eclipse.elk.core', 'de.cau.cs.kieler.klighd.krendering.extensions', 'de.cau.cs.kieler.klighd.ide', 'antlr-runtime', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro'],
   'sccharts.ide': ['org.eclipse.xtext.ide', 'sccharts', 'core', 'de.cau.cs.kieler.klighd', 'simulation', 'kicool', 'simulation.ide', 'scl.ide', 'gson', 'kicool.ide', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro'],
   // Carved down to the headless synthesis parts; see README.
-  'kicool.ui': ['org.eclipse.core.runtime', 'annotations', 'kicool', 'kicool.ide', 'annotations.ide', 'kexpressions', 'kexpressions.ide', 'de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.klighd.ide', 'de.cau.cs.kieler.klighd.krendering.extensions', 'org.eclipse.elk.alg.layered', 'guava', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro', 'swt-mock-ui'],
-  'sccharts.ui': ['sccharts', 'sccharts.ide', 'scg', 'kicool', 'kicool.ui', 'kicool.ide', 'simulation.ide', 'annotations.ide', 'de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.klighd.ide', 'de.cau.cs.kieler.klighd.kgraph', 'de.cau.cs.kieler.klighd.krendering.extensions', 'org.eclipse.elk.graph', 'org.eclipse.elk.core', 'org.eclipse.elk.alg.layered', 'org.eclipse.elk.alg.force', 'org.eclipse.elk.alg.rectpacking', 'gson', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro', 'swt-mock-ui'],
+  'kicool.ui': ['org.eclipse.core.runtime', 'annotations', 'kicool', 'kicool.ide', 'annotations.ide', 'kexpressions', 'kexpressions.ide', 'de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.klighd.ide', 'de.cau.cs.kieler.klighd.krendering.extensions', 'org.eclipse.elk.alg.layered', 'guava', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro', 'swt-mock-ui', 'kgraph.text'],
+  'sccharts.ui': ['sccharts', 'sccharts.ide', 'scg', 'kicool', 'kicool.ui', 'kicool.ide', 'simulation.ide', 'annotations.ide', 'de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.klighd.ide', 'de.cau.cs.kieler.klighd.kgraph', 'de.cau.cs.kieler.klighd.krendering.extensions', 'org.eclipse.elk.graph', 'org.eclipse.elk.core', 'org.eclipse.elk.alg.layered', 'org.eclipse.elk.alg.force', 'org.eclipse.elk.alg.rectpacking', 'gson', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro', 'swt-mock-ui', 'swt-mock-jface', 'swt-mock-swt'],
   'scg.klighd': ['org.eclipse.elk.alg.layered', 'org.eclipse.elk.alg.mrtree', 'de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.klighd.krendering.extensions', 'scg', 'kicool', 'kicool.ide', 'kicool.ui', 'simulation.ide', 'annotations.ide', 'guava', 'guice', 'org.eclipse.xtext', 'org.eclipse.xtend.lib', 'org.eclipse.xtend.lib.macro'],
   'language.server': ['core', 'kicool', 'kicool.ide', 'kicool.ui', 'sccharts', 'sccharts.ide', 'sccharts.ui', 'scg', 'scg.klighd', 'simulation', 'simulation.ide', 'de.cau.cs.kieler.klighd.lsp', 'org.eclipse.elk.alg.layered', 'org.eclipse.elk.alg.mrtree', 'org.eclipse.elk.alg.rectpacking', 'org.eclipse.xtext', 'org.eclipse.xtext.ide', 'org.eclipse.xtext.xbase.lib', 'org.eclipse.xtend.lib', 'gson', 'guice', 'log4j-core', 'org.eclipse.lsp4j', 'org.eclipse.lsp4j.jsonrpc', 'org.eclipse.core.runtime', 'org.eclipse.equinox.common', 'freemarker'],
 }
@@ -42,6 +42,9 @@ const EXTERNAL = {
   reload4j: ['ch.qos.reload4j', 'reload4j'],
   'log4j-core': ['org.apache.logging.log4j', 'log4j-core'],
   'swt-mock-ui': ['de.cau.cs.kieler.swt.mock', 'org.eclipse.ui'],
+  'swt-mock-jface': ['de.cau.cs.kieler.swt.mock', 'org.eclipse.jface'],
+  'swt-mock-swt': ['de.cau.cs.kieler.swt.mock', 'org.eclipse.swt'],
+  'kgraph.text': ['de.cau.cs.kieler.klighd', 'de.cau.cs.kieler.kgraph.text'],
 }
 function coords(name) {
   if (EXTERNAL[name]) return EXTERNAL[name]
