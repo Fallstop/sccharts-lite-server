@@ -7,6 +7,8 @@
   <dependencies>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>scl</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>core</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kexpressions.ide</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>annotations.ide</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>org.eclipse.xtext</groupId><artifactId>org.eclipse.xtext.ide</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib.macro</artifactId></dependency>

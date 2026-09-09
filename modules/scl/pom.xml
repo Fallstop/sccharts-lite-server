@@ -7,6 +7,7 @@
   <dependencies>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kexpressions</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kicool</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>scg</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>org.eclipse.xtext</groupId><artifactId>org.eclipse.xtext</artifactId></dependency>
     <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtext</groupId><artifactId>org.eclipse.xtext.xbase.lib</artifactId></dependency>
