@@ -16,7 +16,7 @@
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>scg.klighd</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>simulation</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>simulation.ide</artifactId><version>${project.version}</version></dependency>
-    <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.lsp</artifactId></dependency>
+    <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>klighd.lsp</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>org.eclipse.elk</groupId><artifactId>org.eclipse.elk.core.service</artifactId></dependency>
     <dependency><groupId>org.eclipse.elk</groupId><artifactId>org.eclipse.elk.alg.layered</artifactId></dependency>
     <dependency><groupId>org.eclipse.elk</groupId><artifactId>org.eclipse.elk.alg.mrtree</artifactId></dependency>
