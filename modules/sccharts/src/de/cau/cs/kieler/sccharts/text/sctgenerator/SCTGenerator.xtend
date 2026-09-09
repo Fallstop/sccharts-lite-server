@@ -20,10 +20,6 @@ import de.cau.cs.kieler.sccharts.SCCharts
 import java.io.IOException
 import java.util.List
 import java.util.Map
-import org.eclipse.core.resources.IProject
-import org.eclipse.core.runtime.IProgressMonitor
-import org.eclipse.core.runtime.Status
-import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.elk.graph.properties.IProperty
 import org.eclipse.elk.graph.properties.MapPropertyHolder
 import org.eclipse.elk.graph.properties.Property
@@ -178,67 +174,8 @@ class SCTGenerator extends MapPropertyHolder implements ISCTGeneratorPropertyHol
      * 
      * @returns void
      */
-    def void createModels(IProject project) {
-        // Create a new eclipse job to handle the model creation.
-        val job = new Job("Creating Models") {
-            override protected run(IProgressMonitor monitor) {
-                val int numberOfModels = getProperty(NUMBER_OF_MODELS).value
-                val modelGenerator = injector.getInstance(ModelGenerator)
-                monitor.beginTask("Creating Models", numberOfModels)
-                for (var int i = 0; i < numberOfModels; i++) {
-                    var String is = "" + i
-                    // Add prefix zeros
-                    while (is.length < numberOfModels.toString.length) {
-                        is = "0" + is
-                    }
-                    // Create a new model and save it.
-                    val model = modelGenerator.createModel(MODEL_ID_PREFIX + is)
-                    saveModel(model, project)
-                    monitor.worked(1)
-                    // If the user canceled the process, abort.
-                    if (monitor.canceled) {
-                        return Status.CANCEL_STATUS
-                    }
-                }
-                // Refresh the project.
-                project.refreshLocal(1, monitor)
-                return Status.OK_STATUS
-            }
-        }
-        // Schedule the job.
-        job.setUser(true)
-        job.schedule
-    }  
-    
-    /**
-     * Save the model.
-     * 
-     * @param rootState expects the root state of the newly created model.
-     * @param project defines the project in which the model should be saved.
-     * 
-     * @returns void
-     */
-    protected def saveModel(SCCharts sccharts, IProject project) {
-        // Create output URI.
-        var output = URI.createURI(project.locationURI.toString() + "/" + sccharts.rootStates.head.name);
-        output = output.appendFileExtension(SCT_MODEL_EXTENSION);
+    // createModels/saveModel wrote generated models into an Eclipse workspace project; not available in this build.
 
-        // Try to save the model.
-        try {
-            val saveRes = new ResourceSetImpl().createResource(output);
-            saveRes.getContents().add(sccharts);
-            saveRes.save(null)
-        } catch (IOException e) {
-            throw new Exception("Cannot write output model file: " + e.getMessage());
-        }
-        
-        registeredExtensions.forEach[ onSaveModel(sccharts, project) ]
-    }    
-      
-    /* SCT Generator extensions
-     * You can use these by including the SCT Generator as extension.
-     */
-    
     /**
      * Returns a random integer number depending on the kind of property used.
      * <pre>

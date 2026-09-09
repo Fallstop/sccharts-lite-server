@@ -17,7 +17,6 @@ import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.sccharts.Region
 import de.cau.cs.kieler.sccharts.State
 import de.cau.cs.kieler.sccharts.Transition
-import org.eclipse.core.resources.IProject
 import de.cau.cs.kieler.sccharts.SCCharts
 
 /**
@@ -82,6 +81,4 @@ interface ISCTGeneratorExtension extends ISCTGeneratorPropertyHolder {
     def void onModelCreate(SCCharts sccharts)
     
     def void onRootStateCreate(State rootState)
-    
-    def void onSaveModel(SCCharts sccharts, IProject project)
 }

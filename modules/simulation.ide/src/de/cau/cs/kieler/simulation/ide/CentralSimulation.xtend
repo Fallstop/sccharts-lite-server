@@ -16,10 +16,6 @@ import de.cau.cs.kieler.core.services.KielerServiceLoader
 import de.cau.cs.kieler.kicool.compilation.Compile
 import de.cau.cs.kieler.kicool.environments.Environment
 import de.cau.cs.kieler.simulation.SimulationContext
-import org.eclipse.core.runtime.IProgressMonitor
-import org.eclipse.core.runtime.Status
-import org.eclipse.core.runtime.jobs.IJobFunction
-import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.xtend.lib.annotations.Accessors
 import de.cau.cs.kieler.simulation.events.ISimulationListener
 
@@ -97,45 +93,29 @@ class CentralSimulation {
     }
     
     static def compileAndStartSimulation(String system, Object model, Environment startEnvironment) {
-        Job.create("Simulation Compilation", new IJobFunction() {
-            
-            override run(IProgressMonitor monitor) {
-                monitor.beginTask("Compiling", IProgressMonitor.UNKNOWN)
-                if (monitor.canceled) {return Status.CANCEL_STATUS}
+        val worker = new Thread([
+            try {
+                val context = Compile.createCompilationContext(system, model)
+                context.startEnvironment.setProperty(Environment.INPLACE, true)
+                context.startEnvironment.copyProperties(startEnvironment)
+                context.compile
                 
-                try {
-                    val context = Compile.createCompilationContext(system, model)
-                    context.startEnvironment.setProperty(Environment.INPLACE, true)
-                    context.startEnvironment.copyProperties(startEnvironment)
-                    context.compile
-                    
-                    if (monitor.canceled) {return Status.CANCEL_STATUS}
-                
-                    if (context.hasErrors) {
-                        new Exception("Error(s) in compilation for simulation", new Throwable(context.allErrors.map[message].toSet.join("\n"))).handleError
-                    }
-                    
-                    if (monitor.canceled) {return Status.CANCEL_STATUS}
-                    
-                    val sim = context.result.model
-                    if (sim instanceof SimulationContext) {
-                        monitor.taskName = "Starting Simulation"
-                        sim.startSimulation()
-                    } else {
-                        new Exception("Error in compilation for simulation:\n Resulting model is not a simulation context").handleError
-                    }
-                } catch (Exception e) {
-                    e.handleError
-                    return Status.CANCEL_STATUS
+                if (context.hasErrors) {
+                    new Exception("Error(s) in compilation for simulation", new Throwable(context.allErrors.map[message].toSet.join("\n"))).handleError
                 }
-                return Status.OK_STATUS
+                
+                val sim = context.result.model
+                if (sim instanceof SimulationContext) {
+                    sim.startSimulation()
+                } else {
+                    new Exception("Error in compilation for simulation:\n Resulting model is not a simulation context").handleError
+                }
+            } catch (Exception e) {
+                e.handleError
             }
-            
-        }) => [
-            user = true
-            priority = Job.INTERACTIVE
-            schedule()
-        ]
+        ], "Simulation Compilation")
+        worker.daemon = true
+        worker.start()
     }
     
     private static def handleError(Exception e) {

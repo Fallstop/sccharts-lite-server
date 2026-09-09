@@ -12,7 +12,6 @@
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib.macro</artifactId></dependency>
     <dependency><groupId>org.eclipse.emf</groupId><artifactId>org.eclipse.emf.ecore</artifactId></dependency>
-    <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.runtime</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtext</groupId><artifactId>org.eclipse.xtext</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtext</groupId><artifactId>org.eclipse.xtext.xtext.generator</artifactId><scope>provided</scope></dependency>
   </dependencies>

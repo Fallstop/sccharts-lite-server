@@ -12,10 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation.internal
 
-import org.eclipse.core.runtime.jobs.Job
-import org.eclipse.core.runtime.IProgressMonitor
 import org.eclipse.xtend.lib.annotations.Accessors
-import org.eclipse.core.runtime.Status
 import de.cau.cs.kieler.kicool.compilation.CompilationContext
 
 /**
@@ -25,29 +22,22 @@ import de.cau.cs.kieler.kicool.compilation.CompilationContext
  * @kieler.design 2017-02-19 proposed
  * @kieler.rating 2017-02-19 proposed yellow  
  */
-class AsynchronousCompilation extends Job {
-   
+class AsynchronousCompilation {
+    
     /** Compilation context storage */ 
     @Accessors CompilationContext compilationContext
     
     new(CompilationContext compilationContext) {
-        super("Compiling (IMBC): " + compilationContext.system.id)
-        
         this.compilationContext = compilationContext
     }
     
-    override protected run(IProgressMonitor monitor) {
-        compilationContext.compile
-        
-        if (monitor.isCanceled()) {
-            return Status.CANCEL_STATUS;
-        }
-             
-        return Status.OK_STATUS;   
+    def schedule() {
+        val worker = new Thread([compilationContext.compile], "Compiling (IMBC): " + compilationContext.system.id)
+        worker.daemon = true
+        worker.start()
     }
     
     static def compile(CompilationContext compilationContext) {
         new AsynchronousCompilation(compilationContext).schedule
     }
-   
 }

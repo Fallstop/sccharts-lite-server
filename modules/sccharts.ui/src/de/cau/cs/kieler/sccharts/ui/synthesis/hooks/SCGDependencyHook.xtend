@@ -55,9 +55,6 @@ import de.cau.cs.kieler.sccharts.ui.synthesis.styles.StateStyles
 import de.cau.cs.kieler.scg.Assignment
 import de.cau.cs.kieler.scg.SCGraphs
 import java.util.HashMap
-import org.eclipse.core.runtime.IProgressMonitor
-import org.eclipse.core.runtime.Status
-import org.eclipse.core.runtime.jobs.Job
 import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.graph.properties.IProperty
 import org.eclipse.elk.graph.properties.Property
@@ -211,9 +208,8 @@ class SCGDependencyHook extends SynthesisHook {
 			val type = context.getOptionValue(SCG_DEPENDENCY_TYPES) as DepType;
             if (type == DepType.Elements || type == DepType.Regions) {
     			// Create and start background job for compiling
-    			new Job(JOB_NAME) {
-    
-    				override protected run(IProgressMonitor monitor) {
+    			// Background computation of the dependency edges (formerly an Eclipse Job).
+    			val worker = new Thread([
     					val newLoopElements = calculateSCGDependencyEdges(rootNode, scc, tracker, attachNode);
     
     					// Headless: there is no UI thread to synchronize with, apply the edges directly.
@@ -231,10 +227,9 @@ class SCGDependencyHook extends SynthesisHook {
     						// Re layout to place edges correctly
     						new LightDiagramLayoutConfig(context).performLayout
     					}
-    					return Status.OK_STATUS;
-    				}
-    
-    			}.schedule;
+    			], JOB_NAME)
+    			worker.daemon = true
+    			worker.start
     			return false;
             } else {
                 return false;

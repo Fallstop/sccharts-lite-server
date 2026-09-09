@@ -23,7 +23,6 @@ import de.cau.cs.kieler.kexpressions.Declaration
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import static extension de.cau.cs.kieler.sccharts.text.sctgenerator.ModelGenerator.isSuperstate
-import org.eclipse.core.resources.IProject
 import de.cau.cs.kieler.sccharts.SCCharts
 import de.cau.cs.kieler.sccharts.PreemptionType
 import org.eclipse.elk.graph.properties.IProperty
@@ -123,8 +122,5 @@ class AbortExtension implements ISCTGeneratorExtension {
         // Do nothing.    
     }
     
-    override onSaveModel(SCCharts sccharts, IProject project) {
-        // Do nothing.    
-    }
 
 }

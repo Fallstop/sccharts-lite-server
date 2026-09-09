@@ -11,7 +11,6 @@
     <dependency><groupId>com.google.guava</groupId><artifactId>guava</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib</artifactId></dependency>
     <dependency><groupId>org.eclipse.xtend</groupId><artifactId>org.eclipse.xtend.lib.macro</artifactId></dependency>
-    <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.runtime</artifactId></dependency>
     <dependency><groupId>ch.qos.reload4j</groupId><artifactId>reload4j</artifactId></dependency>
     <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd</artifactId></dependency>
     <dependency><groupId>de.cau.cs.kieler.klighd</groupId><artifactId>de.cau.cs.kieler.klighd.ide</artifactId></dependency>

@@ -26,7 +26,6 @@ import de.cau.cs.kieler.sccharts.text.sctgenerator.SCTGenerator
 import de.cau.cs.kieler.sccharts.text.sctgenerator.Value
 import java.io.IOException
 import java.io.PrintWriter
-import org.eclipse.core.resources.IProject
 import org.eclipse.elk.graph.properties.IProperty
 import org.eclipse.elk.graph.properties.Property
 import org.eclipse.emf.common.util.URI
@@ -97,23 +96,6 @@ class EsoExtension implements ISCTGeneratorExtension {
         throw new UnsupportedOperationException("TODO: auto-generated method stub")
     }    
     
-    override void onSaveModel(SCCharts sccharts, IProject project) {
-        val rootState = sccharts.rootStates.head
-        if(GENERATE_TRACE.property.value == 1) {            
-            var output = URI.createURI(project.locationURI.toString() + "/" + rootState.name);
-            output = output.appendFileExtension("eso");
-            rootState.declarations.filter(VariableDeclaration).filter[it.input].generateTraces
-            // Try to save the model.
-            try {
-                val PrintWriter writer = new PrintWriter(output.toFileString, "UTF-8")
-                writer.print(builder)
-                writer.close
-    
-            } catch (IOException e) {
-                throw new Exception("Cannot write output model file: " + e.getMessage());
-            }
-        }
-    }
     
     override getCategory() {
         SCTGenerator.SCTGENERATOR_EXTENSIONS_TAB

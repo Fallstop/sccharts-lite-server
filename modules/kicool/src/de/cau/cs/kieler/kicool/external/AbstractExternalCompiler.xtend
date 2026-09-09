@@ -20,12 +20,9 @@ import java.io.PrintStream
 import java.util.ArrayList
 import java.util.List
 import java.util.Map
-import org.eclipse.core.runtime.Path
-import org.eclipse.core.runtime.Platform
 import org.eclipse.emf.common.util.URI
 
 import static extension de.cau.cs.kieler.kicool.deploy.ProjectInfrastructure.*
-import static extension org.eclipse.core.runtime.FileLocator.*
 
 /**
  * @author als
@@ -63,41 +60,7 @@ abstract class AbstractExternalCompiler {
                     return true
                 }
             } else if (root.isPlatformPlugin) {
-                try {
-                    val bundle = Platform.getBundle(root.segment(1))
-                    val bundleFile = bundle.getBundleFile
-                    if (bundleFile.directory) {
-                        val file = new File(bundle.find(new Path(root.segments.drop(2).join("/"))).toFileURL.toURI.normalize)
-                        if (file.directory) {
-                            logger.println("Dectected external compiler on plugin path: " + file)
-                            if (file.checkExecutableFlags(logger, executables)) {
-                                rootDir = file
-                                return true
-                            }
-                        }
-                    }
-                } catch(Exception e) {
-                    // ignore
-                }
-                if (rootDir === null) {
-                    logger.println("External compiler must be copied to an accessable location.")
-                    val target = if (pinf.hasProject) {
-                        new File(pinf.project.workspace.root.rawLocation.toString + pinf.project.fullPath.toString, name)
-                    } else {
-                        new File(pinf.generatedCodeFolder, name)
-                    }
-                    if (!target.exists) {
-                        target.mkdirs
-                        root.copyFolder(target, logger, true)
-                        logger.println("External compiler copied to: " + target)
-                    } else {
-                        logger.println("External compiler copied already exists in: " + target)
-                    }
-                    if (target.checkExecutableFlags(logger, executables)) {
-                        rootDir = target
-                        return true
-                    }
-                }
+                logger.println("External compilers inside Eclipse plug-ins are not supported in this build: " + root)
             }
         } else {
             logger.println("No compiler available")

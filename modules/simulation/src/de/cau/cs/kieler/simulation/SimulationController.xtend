@@ -21,10 +21,7 @@ import de.cau.cs.kieler.simulation.mode.SimulationMode
 import de.cau.cs.kieler.simulation.mode.SimulationModes
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
-import org.eclipse.core.runtime.CoreException
-import org.eclipse.core.runtime.ICoreRunnable
-import org.eclipse.core.runtime.IProgressMonitor
-import org.eclipse.core.runtime.jobs.Job
+import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.xtend.lib.annotations.Accessors
 
 import static com.google.common.base.Preconditions.*
@@ -46,40 +43,32 @@ class SimulationController implements SimulationControls {
     
     // Async worker
     val BlockingQueue<SimulationControlEvent> asyncJobQueue
-    val Job asyncJob
+    var Thread asyncWorker
+    val AtomicBoolean asyncCancelled = new AtomicBoolean(false)
     
     new(SimulationContext context) {
         this.context = context
         this.mode = SimulationModes.MANUAL
         
         asyncJobQueue = new ArrayBlockingQueue(10)
-        this.asyncJob = Job.create("Simulation", new ICoreRunnable() {
-            
-            override run(IProgressMonitor monitor) throws CoreException {
-                monitor.beginTask("Waiting", IProgressMonitor.UNKNOWN)
-                while(!monitor.canceled) {
-                    monitor.taskName = "Waiting"
-                    val event = asyncJobQueue.take()
-                    if (!monitor.canceled) {
-                        switch(event.operation) {
-                            case STOP: {
-                                monitor.done
-                                return
-                            }
-                            case STEP: {
-                                monitor.taskName = "Stepping"
-                                context.performInternalStep
-                                context.notify(event)
-                            }
-                        }
+    }
+
+    /** Drains the event queue on a daemon thread until cancelled or a STOP event arrives. */
+    private def void runAsyncWorker() {
+        while (!asyncCancelled.get) {
+            val event = asyncJobQueue.take()
+            if (!asyncCancelled.get) {
+                switch(event.operation) {
+                    case STOP: {
+                        return
+                    }
+                    case STEP: {
+                        context.performInternalStep
+                        context.notify(event)
                     }
                 }
-                monitor.done()
             }
-            
-        })
-        this.asyncJob.user = true
-        this.asyncJob.priority = Job.INTERACTIVE
+        }
     }
 
     /**
@@ -100,7 +89,10 @@ class SimulationController implements SimulationControls {
         context.models.forEach[initialize(context, context.dataPool)]
         
         if (async) {
-            asyncJob.schedule()
+            asyncCancelled.set(false)
+            asyncWorker = new Thread([runAsyncWorker], "Simulation")
+            asyncWorker.daemon = true
+            asyncWorker.start()
         }
         
         mode.start(async)
@@ -117,7 +109,7 @@ class SimulationController implements SimulationControls {
         mode.stop()
         
         if (asynchronous) {
-            asyncJob.cancel
+            asyncCancelled.set(true)
             asyncJobQueue.offer(new SimulationControlEvent(context, SimulationOperation.STOP))
         }
         

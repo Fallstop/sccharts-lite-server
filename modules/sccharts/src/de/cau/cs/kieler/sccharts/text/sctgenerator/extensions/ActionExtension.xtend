@@ -25,7 +25,6 @@ import de.cau.cs.kieler.sccharts.text.sctgenerator.ModelGenerator
 import de.cau.cs.kieler.sccharts.text.sctgenerator.SCTGenerator
 
 import static extension de.cau.cs.kieler.sccharts.text.sctgenerator.ModelGenerator.*
-import org.eclipse.core.resources.IProject
 import de.cau.cs.kieler.kexpressions.VariableDeclaration
 import de.cau.cs.kieler.sccharts.SCCharts
 import de.cau.cs.kieler.sccharts.extensions.SCChartsScopeExtensions
@@ -132,7 +131,5 @@ class ActionExtension implements ISCTGeneratorExtension {
     override onRootStateCreate(State rootState) {
     }
     
-    override onSaveModel(SCCharts sccharts, IProject project) {
-    }
     
 }

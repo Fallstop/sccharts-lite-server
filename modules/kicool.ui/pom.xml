@@ -5,7 +5,6 @@
   <parent><groupId>de.cau.cs.kieler.lite</groupId><artifactId>parent</artifactId><version>0.1.0-SNAPSHOT</version><relativePath>../../pom.xml</relativePath></parent>
   <artifactId>kicool.ui</artifactId>
   <dependencies>
-    <dependency><groupId>org.eclipse.platform</groupId><artifactId>org.eclipse.core.runtime</artifactId></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>annotations</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kicool</artifactId><version>${project.version}</version></dependency>
     <dependency><groupId>de.cau.cs.kieler.lite</groupId><artifactId>kicool.ide</artifactId><version>${project.version}</version></dependency>
@@ -28,6 +27,7 @@
       <resource><directory>src</directory><excludes><exclude>**/*.java</exclude><exclude>**/*.xtend</exclude><exclude>**/*.ecore</exclude><exclude>**/*.genmodel</exclude><exclude>**/*.mwe2</exclude><exclude>**/*.xtext</exclude><exclude>**/*.g</exclude><exclude>**/*._trace</exclude></excludes></resource>
       <resource><directory>resources</directory><targetPath>resources</targetPath></resource>
       <resource><directory>services</directory><targetPath>META-INF/services</targetPath></resource>
+      <resource><directory>icons</directory><targetPath>icons</targetPath></resource>
     </resources>
     <plugins>
       <plugin><groupId>org.codehaus.mojo</groupId><artifactId>build-helper-maven-plugin</artifactId></plugin>

@@ -35,10 +35,6 @@ import java.util.Iterator
 import java.util.List
 import java.util.Set
 import java.util.stream.Collectors
-import org.eclipse.core.resources.IProject
-import org.eclipse.core.resources.IResource
-import org.eclipse.core.resources.ResourcesPlugin
-import org.eclipse.core.runtime.Platform
 import org.eclipse.emf.common.util.URI
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.emf.ecore.resource.Resource
@@ -64,8 +60,9 @@ class ProjectInfrastructure {
     public static val IProperty<String> MODEL_FILE_PATH = 
         new Property<String>("de.cau.cs.kieler.kicool.deploy.project.file.path", null)
         
+    /** Eclipse workspace projects are not available outside Eclipse; this build always works next to the model. */
     public static val IProperty<Boolean> USE_TEMPORARY_PROJECT = 
-        new Property<Boolean>("de.cau.cs.kieler.kicool.deploy.project.use", true)
+        new Property<Boolean>("de.cau.cs.kieler.kicool.deploy.project.use", false)
 
     public static val IProperty<String> TEMPORARY_PROJECT_NAME = 
         new Property<String>("de.cau.cs.kieler.kicool.deploy.project.name", "KIELER-Temp")
@@ -84,10 +81,8 @@ class ProjectInfrastructure {
             de.cau.cs.kieler.core.Platform.isWindows)
         
 
-    public static val Set<IProject> createdTemporaryProjects = newHashSet
+    // Temporary Eclipse workspace projects are not supported in this build.
 
-    @Accessors(AccessorType.PUBLIC_GETTER)
-    var IProject project = null
     @Accessors(AccessorType.PUBLIC_GETTER)
     var File modelFile = null        
     @Accessors(AccessorType.PUBLIC_GETTER)
@@ -106,30 +101,6 @@ class ProjectInfrastructure {
             environment.setProperty(PROJECT_INFRASTRUCTURE, projectInfrastructure)
         }
         return projectInfrastructure
-    }
-    /**
-     * Returns the temporary project.
-     * If the project does not exist yet, it is created beforehand.
-     * 
-     * @return The temporary project
-     */
-    static def IProject getTemporaryProject() { 
-        return getTemporaryProject(null)
-    }
-     
-    static def IProject getTemporaryProject(Environment environment) {
-        val root = ResourcesPlugin.getWorkspace.getRoot
-        val name = if (environment !== null) environment.getProperty(TEMPORARY_PROJECT_NAME) else TEMPORARY_PROJECT_NAME.^default
-        val project = root.getProject(name)
-        if (!project.exists) {
-            project.create(null)
-        }
-        if(!project.open) {
-            project.open(null)
-        }
-        // Store project for cleanup
-        createdTemporaryProjects.add(project)
-        return project
     }
     
     new(Environment environment) {
@@ -162,34 +133,9 @@ class ProjectInfrastructure {
         }
         
         if (environment.getProperty(USE_TEMPORARY_PROJECT)) {
-            // initialize project
-            project = environment.temporaryProject
-            
-            // Find name
-            var name = "unknown"
-            if (resource !== null && resource.URI !== null && resource.URI.platform) {
-                name = resource.URI.toPlatformString(true)
-            } else if (resource !== null && resource.URI !== null && resource.URI.file) {
-                name = resource.URI.toFileString
-                if (environment.getProperty(USE_SHORT_DIRECTORY_NAMES)) {
-                    val nameSplits = name.split("\\\\")
-                    name = nameSplits.get(nameSplits.length - 1)
-                }
-            } else if (modelFile !== null) {
-                name = modelFile.toString
-            } else if (inputModel instanceof Nameable) {
-                name = inputModel.name
-            }
-            name = name.replaceAll("/|\\\\", "-")
-            name = name.replaceAll(" |\\.|:", "-")
-            
-            // Create Folder
-            val folder = project.getFolder(name)
-            if (!folder.exists) {
-                folder.create(true, true, null)
-            }
-            modelFolder = folder.rawLocation.toFile
-        } else if (modelFile !== null && modelFile.exists) {
+            environment.warnings.add("Temporary workspace projects are not available in this build; generating next to the model.")
+        }
+        if (modelFile !== null && modelFile.exists) {
             modelFolder = modelFile.parentFile
         } else {
             environment.warnings.add("Can not detect model location to create project infrastructure.")
@@ -198,13 +144,7 @@ class ProjectInfrastructure {
         // Create kieler-gen folder
         if (modelFolder !== null) {
             if (environment.getProperty(USE_GENERATED_FOLDER)) {
-                if (hasProject) {
-                    val gen = project.getFolder(modelFolder.name).getFolder(environment.getProperty(GENERATED_NAME))
-                    if (!gen.exists) {
-                        gen.create(true, true, null)
-                    }
-                    generatedCodeFolder = gen.rawLocation.toFile
-                } else {
+                {
                     val folder = if (environment.getProperty(GENERATED_FOLDER_ROOT).nullOrEmpty) {
                         modelFolder
                     } else {
@@ -222,24 +162,15 @@ class ProjectInfrastructure {
     }
     
     def getProjectRelativeFile(File file) {
-        if (hasProject) {
-            val root = project.workspace.root.rawLocation
-            if (root !== null) {
-                return root.toFile.toPath.relativize(file.toPath).toFile
-            } else {
-                return file
-            }
-        } else {
-            return file
-        }
+        return file
     }
     
     def hasProject() {
-        return project !== null
+        return false
     }
     
     def refresh() {
-        if (hasProject) project.refreshLocal(IResource.DEPTH_INFINITE, null)
+        // No workspace to refresh.
     }
     
     def log(PrintStream logger) {
@@ -250,10 +181,9 @@ class ProjectInfrastructure {
         logger.println
     }
     
-    def findResourceLocation(Resource resource) {
-        val uri = resource?.URI?.toPlatformString(true)
-        val file = uri !== null ? ResourcesPlugin.workspace.root.findMember(uri) : null
-        return file?.rawLocation?.toFile
+    def File findResourceLocation(Resource resource) {
+        // Workspace-relative (platform:/resource) locations need an Eclipse workspace.
+        return null
     }
     
     // == UTILS ==
@@ -303,10 +233,7 @@ class ProjectInfrastructure {
         val path = src.segments.drop(2).join("/")
         var Iterator<URL> entries
         if (src.isPlatformPlugin) {
-            if (Platform.isRunning) {
-                val bundle = Platform.getBundle(src.segment(1))
-                entries = bundle.findEntries(path, "*", true).toIterator
-            } else {
+            {
                 val uri = ClassLoader.getSystemResource(path).toURI
                 if (uri.scheme.equals("jar")) {
                     val fs = FileSystems.newFileSystem(uri, emptyMap)
@@ -402,12 +329,7 @@ class ProjectInfrastructure {
 
         var URL fileUrl
         if (src.isPlatformPlugin) {
-            if (Platform.isRunning) {
-                val bundle = Platform.getBundle(src.segment(1))
-                val path = src.segments.drop(2).take(src.segmentCount - 3).join("/")
-                val entries = bundle.findEntries(path, src.lastSegment, true)
-                fileUrl = entries?.nextElement
-            } else {
+            {
                 val path = src.segments.drop(2).join("/")
                 fileUrl = ClassLoader.getSystemResource(path)
             }
