@@ -60,7 +60,8 @@ run: the C compiler is `-Dsccharts.cc=<path>` or `$SCCHARTS_CC`, falling back to
   AST synthesis are gone. Eclipse-only actions survive as id-only stubs so syntheses still
   attach them; the Piccolo `TracingEdgeNode` is a headless data holder.
 - `sccharts.ui`: everything but `synthesis/`. Debugging (breakpoints), the Xtext editor
-  integration, the wizard and the editor-cursor `SmartCollapseHook` are gone.
+  integration, the wizard and the editor-cursor `SmartCollapseHook` are gone (the hook's behaviour
+  lives on as the `keith/diagram/cursor` request, see below).
 - `simulation.ide`: the Jetty/WebSocket visualization server (`server/` package) and the remote
   values processor. `keith/simulation/startVisualizationServer` now reports that it is unavailable.
   `SimulationPreferences` keeps values in a map instead of a JFace preference store.
@@ -100,6 +101,18 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   `AbstractLanguageServer.addToMainThreadQueue`.
 - `language.server`: `CompilationResults`/`SnapshotDescription` with `diagnostics`,
   `generatedFiles` and `generationError`; `GeneratedCode` validates and collects in-memory files.
+- `language.server/diagram`: `keith/diagram/cursor` request `{uri, offset, clientId, mode}` →
+  `{ok, message?, element?, expanded, collapsed}`, the LSP form of `sccharts.ui`'s removed
+  `SmartCollapseHook`. The offset is resolved with `EObjectAtOffsetHelper` inside an
+  `ILanguageServerAccess.doRead`, the state/region chain is mapped onto the diagram's input model
+  (by identity, or by URI fragment when `keith/kicool/show -1` parsed its own copy), every node on the
+  path is expanded through the `SprottyViewer`, `expand` mode collapses the regions off the path
+  unless `MemorizingExpandCollapseAction` remembers them, and the diagram server relays out and then
+  selects the innermost element. A diagram showing a compilation snapshot is refused. Contributed
+  extensions never get `initialize(ILanguageServerAccess)`; the access object comes from
+  `KGraphLanguageServerExtension`. The reverse direction (`diagram/openInTextEditor` after a
+  client `SelectAction`) already existed behind `keith/preferences/setPreferences`
+  `diagram.shouldSelectText`; the extension now sends it.
 
 ## Other deviations from upstream
 
