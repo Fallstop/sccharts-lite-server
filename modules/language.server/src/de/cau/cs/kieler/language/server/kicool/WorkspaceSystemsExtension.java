@@ -265,7 +265,15 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         try {
             absolute = absolute.toRealPath();
         } catch (IOException | RuntimeException e) {
-            // A file that vanished keeps its normalised spelling.
+            // A file that vanished: its directory usually still exists and settles the spelling.
+            Path parent = absolute.getParent();
+            if (parent != null && absolute.getFileName() != null) {
+                try {
+                    absolute = parent.toRealPath().resolve(absolute.getFileName());
+                } catch (IOException | RuntimeException ignored) {
+                    // Keep the normalised spelling.
+                }
+            }
         }
         String text = absolute.toString();
         if (text.length() > 1 && text.charAt(1) == ':' && Character.isUpperCase(text.charAt(0))) {
