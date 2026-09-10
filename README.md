@@ -59,9 +59,9 @@ run: the C compiler is `-Dsccharts.cc=<path>` or `$SCCHARTS_CC`, falling back to
   `kitt/tracing`. The compiler view, console, wizards, preferences, JDT-based Java parser and
   AST synthesis are gone. Eclipse-only actions survive as id-only stubs so syntheses still
   attach them; the Piccolo `TracingEdgeNode` is a headless data holder.
-- `sccharts.ui`: everything but `synthesis/`. Debugging (breakpoints), the Xtext editor
-  integration, the wizard and the editor-cursor `SmartCollapseHook` are gone (the hook's behaviour
-  lives on as the `keith/diagram/cursor` request, see below).
+- `sccharts.ui`: everything but `synthesis/`. Eclipse debugging (replaced by the simulation debugger,
+  see below), the Xtext editor integration, the wizard and the editor-cursor `SmartCollapseHook` are gone
+  (the hook's behaviour lives on as the `keith/diagram/cursor` request, see below).
 - `simulation.ide`: the Jetty/WebSocket visualization server (`server/` package) and the remote
   values processor. `keith/simulation/startVisualizationServer` now reports that it is unavailable.
   `SimulationPreferences` keeps values in a map instead of a JFace preference store.
@@ -150,6 +150,40 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   actions and transitions; transitions with priority, preemption, trigger and effects; regions
   with initial/final states). The outline providers give simple names, LSP symbol kinds and
   details. Definition, references and rename are Xtext's defaults and work unchanged.
+
+## Simulation debugging (new in this build)
+
+Eclipse KIELER's breakpoint support lived in `sccharts.ui` on top of the workbench debug
+framework and was removed with it. The language server has its own, protocol-level replacement
+under `language.server/.../simulation/debug` and `sccharts.ide/.../simulation/SimulationStateTracker`:
+
+- `keith/simulation/setBreakpoints` / `setWatches` (requests): replace the breakpoints and
+  watch expressions of the running simulation; each is validated (parse errors, unknown
+  variables against the data pool, unknown or ambiguous state names against the model) and the
+  result lists what was accepted and why not. A state breakpoint fires when the named state is
+  entered during a tick, which `SimulationStateTracker` derives from the taken-transition
+  signaling exactly as the diagram highlighter does (every `tts` system has it); transient
+  states left again within the same tick count as entered. A condition breakpoint fires when
+  its expression holds on the pool a tick produced.
+- Expressions (`DebugExpression`) are parsed by a small recursive-descent parser in SCCharts
+  syntax: identifiers with `.`/`[i]`, int/float/bool/string literals, `pre(x)` (previous
+  tick, the initial values on tick 1), `! -`, `* / %`, `+ -`, comparisons, `== !=`, `&& ||`.
+  Names resolve against the pool exactly first, then as the unique shortest `*_name` key, as
+  compilation prefixes locals with their region. The KExpressions Xtext parser is not used
+  because its references are cross-references into a model, not names in a data pool.
+- Step messages (`DebugMessages.DebugStepMessage`) carry `step`, `watches` (`{id, value | error}`)
+  and `breakpoint` (`{id, kind, label, step}`); `keith/simulation/paused` is sent on a hit as
+  well, and a non-manual simulation mode is switched to manual.
+- `keith/simulation/runToBreakpoint {maxSteps}` steps on the server, reporting every tick,
+  until a breakpoint fires; `keith/simulation/pause` cancels it.
+- `keith/simulation/history` returns the pools of all ticks (the history length is raised
+  from 100 to 100000). `keith/simulation/stepBack {toStep}` is a true rewind: the client's
+  inputs are recorded per tick (`ClientInputs` copies), the executable is stopped, reset and
+  started again, the inputs are replayed silently up to `toStep` (the diagram highlighter
+  follows but lays out only once, `LSDiagramHighlightingHandler.suppressLayoutUpdates`), and a
+  step message with `rewound: true` shows the reached state. Refused when a loaded trace
+  drives the inputs. `keith/simulation/states {uri}` lists a model's states with qualified
+  names and name offsets, marking the active ones while it is simulated.
 
 ## Other deviations from upstream
 

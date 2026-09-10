@@ -84,6 +84,13 @@ interface KeithLanguageClient extends KGraphLanguageClient, LanguageClient {
      */
     @JsonNotification("simulation/started")
     def void startedSimulation(Object message)
+
+    /**
+     * A breakpoint fired: the simulation stays at this tick until the user steps again.
+     * The payload is a DebugMessages.BreakpointHit.
+     */
+    @JsonNotification("simulation/paused")
+    def void simulationPaused(Object hit)
     
     /**
      * Send to client if verification properties were requested.
