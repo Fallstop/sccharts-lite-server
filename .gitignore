@@ -2,3 +2,4 @@ upstream/
 target/
 build.log
 upstream-klighd/
+tree.log
