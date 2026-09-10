@@ -16,6 +16,7 @@ import com.google.gson.JsonObject
 import de.cau.cs.kieler.klighd.lsp.KGraphLanguageClient
 import de.cau.cs.kieler.language.server.kicool.data.DidCompileParam
 import de.cau.cs.kieler.language.server.kicool.data.SendCompilationSystemsParam
+import de.cau.cs.kieler.language.server.kicool.data.SystemsChangedParam
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonSegment
 import org.eclipse.lsp4j.services.LanguageClient
@@ -43,6 +44,13 @@ interface KeithLanguageClient extends KGraphLanguageClient, LanguageClient {
      */
     @JsonNotification("kicool/compilation-systems")
     def void sendCompilationSystems(SendCompilationSystemsParam param)
+
+    /**
+     * Sent when compilation systems defined by .kico files in the workspace were loaded, replaced, removed or
+     * failed to load. The client re-requests the systems and tells the user about errors.
+     */
+    @JsonNotification("kicool/systemsChanged")
+    def void systemsChanged(SystemsChangedParam param)
     
     /**
      * Send to client if not the client itself invoked the simulation step.

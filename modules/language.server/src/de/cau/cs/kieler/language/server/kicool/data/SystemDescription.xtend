@@ -27,4 +27,6 @@ import org.eclipse.xtend.lib.annotations.Data
     boolean isPublic
     boolean simulation
     boolean snapshotSystem
+    /** File URI of the .kico this system was loaded from; null for built-in systems. */
+    String source
 }

@@ -16,6 +16,7 @@
  */
 package de.cau.cs.kieler.klighd.lsp
 
+import com.google.inject.Singleton
 import org.eclipse.xtext.ide.server.WorkspaceManager
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.emf.common.util.URI
@@ -25,6 +26,9 @@ import org.eclipse.emf.common.util.URI
  * 
  * @author nre
  */
+// sccharts-lite: a singleton, so that server-wide extensions injecting WorkspaceManager see the language
+// server's instance (its index and build events) instead of a private, never-initialised copy.
+@Singleton
 class KeithWorkspaceManager extends WorkspaceManager {
     
     /** Lock for synchronizing access to resource loading. */

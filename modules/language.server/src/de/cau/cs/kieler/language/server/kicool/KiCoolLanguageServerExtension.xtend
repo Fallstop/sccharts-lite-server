@@ -397,7 +397,8 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
     def List<SystemDescription> getSystemDescription(List<System> systems, boolean snapshotModel) {
         var systemDescription = newLinkedList
         for (system : systems) {
-            systemDescription.add(new SystemDescription(system.label, system.id, system.public, system.simulation, snapshotModel))
+            systemDescription.add(new SystemDescription(system.label, system.id, system.public, system.simulation, snapshotModel,
+                WorkspaceSystemsExtension.sourceOf(system.id)))
         }
         return systemDescription
     }
