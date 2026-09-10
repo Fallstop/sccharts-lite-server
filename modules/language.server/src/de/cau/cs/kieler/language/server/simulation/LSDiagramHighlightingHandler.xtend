@@ -41,6 +41,12 @@ class LSDiagramHighlightingHandler extends AbstractDiagramHighlightingHandler im
     @Inject KGraphLanguageServerExtension kgraphExt
 
     @Inject KGraphDiagramState diagramState
+
+    /**
+     * Set while the server replays ticks itself (a rewind): the highlighter still follows every tick,
+     * but the diagram is only laid out once at the end instead of once per replayed tick.
+     */
+    public static volatile boolean suppressLayoutUpdates = false
     
     static def create(Injector parentInjector, Class<? extends AbstractDiagramHighlighter> highlighter) {
         val injector = parentInjector.createChildInjector(new Module() {
@@ -71,8 +77,8 @@ class LSDiagramHighlightingHandler extends AbstractDiagramHighlightingHandler im
         } catch (Exception ex) {
             ex.printStackTrace
         } finally {
-            if (e.operation == SimulationOperation.START || e.operation == SimulationOperation.STOP ||
-                e.operation == SimulationOperation.STEP) {
+            if (!suppressLayoutUpdates && (e.operation == SimulationOperation.START || e.operation == SimulationOperation.STOP ||
+                e.operation == SimulationOperation.STEP)) {
                 kgraphExt.updateLayout(simulationExt.currentlySimulatedModel)
             }
         }

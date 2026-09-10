@@ -13,6 +13,15 @@
 package de.cau.cs.kieler.language.server.simulation
 
 import de.cau.cs.kieler.language.server.simulation.data.AddCoSimulationParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.AcceptedResult
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.HistoryResult
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.RunToBreakpointParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.SetBreakpointsParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.SetWatchesParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StatesParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StatesResult
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StepBackParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StepBackResult
 import de.cau.cs.kieler.language.server.simulation.data.LoadedTraceMessage
 import de.cau.cs.kieler.language.server.simulation.data.SavedTraceMessage
 import de.cau.cs.kieler.language.server.simulation.data.SimulationStartParam
@@ -70,4 +79,51 @@ interface SimulationCommandExtension {
     
     @JsonNotification('startVisualizationServer')
     def void startVisualizationServer();
+
+    // ---- Debugging: breakpoints, watches, history and rewinding ----
+
+    /**
+     * Replaces the breakpoints. State breakpoints pause when the named state is entered, condition
+     * breakpoints when the expression holds after a tick. Each is validated; the result says which were accepted.
+     */
+    @JsonRequest('setBreakpoints')
+    def CompletableFuture<AcceptedResult> setBreakpoints(SetBreakpointsParam param)
+
+    /**
+     * Replaces the watch expressions; every step message then carries their values.
+     */
+    @JsonRequest('setWatches')
+    def CompletableFuture<AcceptedResult> setWatches(SetWatchesParam param)
+
+    /**
+     * Steps with the current inputs until a breakpoint fires or maxSteps ticks were executed.
+     * Every tick is reported through didStep; 'pause' or 'stop' cancel the run.
+     */
+    @JsonNotification('runToBreakpoint')
+    def void runToBreakpoint(RunToBreakpointParam param)
+
+    /**
+     * Cancels a running runToBreakpoint after the current tick.
+     */
+    @JsonNotification('pause')
+    def void pause()
+
+    /**
+     * The data pools of the ticks so far, oldest first.
+     */
+    @JsonRequest('history')
+    def CompletableFuture<HistoryResult> history()
+
+    /**
+     * Rewinds the simulation to the state after tick toStep (0 is the initial state) by restarting the
+     * executable and replaying the recorded inputs. A didStep message with rewound=true follows on success.
+     */
+    @JsonRequest('stepBack')
+    def CompletableFuture<StepBackResult> stepBack(StepBackParam param)
+
+    /**
+     * The states of a model with their qualified names, and which are active in a running simulation.
+     */
+    @JsonRequest('states')
+    def CompletableFuture<StatesResult> states(StatesParam param)
 }

@@ -32,6 +32,16 @@ import de.cau.cs.kieler.language.server.simulation.data.SimulationStartedMessage
 import de.cau.cs.kieler.language.server.simulation.data.SimulationStepMessage
 import de.cau.cs.kieler.language.server.simulation.data.SimulationStepParam
 import de.cau.cs.kieler.language.server.simulation.data.SimulationStoppedMessage
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.DebugStepMessage
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.RunToBreakpointParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.SetBreakpointsParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.SetWatchesParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StatesParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StatesResult
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StepBackParam
+import de.cau.cs.kieler.language.server.simulation.data.DebugMessages.StepBackResult
+import de.cau.cs.kieler.language.server.simulation.debug.SimulationDebugger
+import java.util.concurrent.CompletableFuture
 import de.cau.cs.kieler.simulation.CoSimulationExeWrapper
 import de.cau.cs.kieler.simulation.DataPool
 import de.cau.cs.kieler.simulation.SimulationContext
@@ -131,6 +141,17 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
     var String currentlySimulatedModel
 
     /**
+     * Breakpoints, watches and the input record of the running simulation.
+     */
+    @Accessors(PUBLIC_GETTER)
+    val SimulationDebugger debugger = new SimulationDebugger
+
+    /**
+     * What the last tick produced for the debugger (set by update, read by runToBreakpoint).
+     */
+    var SimulationDebugger.TickInfo lastTick
+
+    /**
      * Called on client notification and starts a simulation for specified uri and simulation type.
      * 
      * @param param with: <br>
@@ -173,6 +194,8 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
         val sim = resultArray.last()
         if (sim instanceof SimulationContext) {
             prepareSimulation(sim as SimulationContext)
+            debugger.attach(sim as SimulationContext)
+            lastTick = null
             // Add user value processor
             val root = currentSimulation.system.processors as ProcessorGroup
             root.processors.add(0, KiCoolFactory.eINSTANCE.createProcessorReference => [
@@ -206,6 +229,7 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
         // Set the values used by the UserValues processor de.cau.cs.kieler.simulation.ide.language.server.uservalues
         ClientInputs.values = param.valuesForNextStep
         stepNumber++
+        debugger.recordInputs(stepNumber, param.valuesForNextStep)
         // Set simulation mode, default mode is manual mode
         setSimulationType(param.simulationType)
         // Execute an asynchronous simulation step
@@ -225,8 +249,10 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
     override stop() {
         try {
             // Stop the running simulation and remove listeners
+            debugger.cancelRun
             stopAndRemoveSimulation
             removeListener(this)
+            debugger.detach
             stepNumber = -1
             currentlySimulatedModel = null
         } catch (Exception e) {
@@ -303,15 +329,41 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
             switch ((e as SimulationControlEvent).operation) {
                 case STEP: { // Send step data if a step occurred.
                     try {
-                        this.client.sendSimulationStepData(
-                            new SimulationStepMessage(true, "", CentralSimulation.currentSimulation.dataPool.pool)
-                        )
+                        val sim = o as SimulationContext
+                        // Breakpoints and watches look at the pool this tick produced.
+                        val tick = debugger.tick(sim, stepNumber)
+                        lastTick = tick
+                        if (debugger.replaying) {
+                            // A rewind drives the ticks itself and reports the final state once.
+                            debugger.tickArrived
+                        } else {
+                            this.client.sendSimulationStepData(new DebugStepMessage => [
+                                successful = true
+                                error = ""
+                                values = sim.dataPool.pool
+                                step = stepNumber
+                                watches = tick.watches
+                                breakpoint = tick.breakpoint
+                            ])
+                            if (tick.breakpoint !== null) {
+                                if (!(sim.mode instanceof ManualMode)) {
+                                    sim.mode = ManualMode
+                                }
+                                this.client.simulationPaused(tick.breakpoint)
+                            }
+                            debugger.tickArrived
+                        }
                     } catch (Exception exp) {
                         exp.printStackTrace
                         sendError("An error occurred during simulation step. You might want to restart your LS. " + e)
                     } 
                 }
                 case START: { // Start the simulation. Send corresponding message to client.
+                    debugger.started(o as SimulationContext)
+                    if (debugger.replaying) {
+                        // The executable was restarted for a rewind; the client keeps its table.
+                        return
+                    }
                     try {
                         var datapool = this.nextDataPool
     
@@ -424,6 +476,153 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
         throw new UnsupportedOperationException("TODO: auto-generated method stub")
     }
     
+    // ---- Debugging: breakpoints, watches, history and rewinding ----
+
+    override setBreakpoints(SetBreakpointsParam param) {
+        return CompletableFuture.completedFuture(debugger.setBreakpoints(param))
+    }
+
+    override setWatches(SetWatchesParam param) {
+        return CompletableFuture.completedFuture(debugger.setWatches(param))
+    }
+
+    override runToBreakpoint(RunToBreakpointParam param) {
+        val sim = currentSimulation
+        if (sim === null || !debugger.isAttached(sim)) {
+            sendError("No simulation is running.")
+            return
+        }
+        val maxSteps = if (param === null || param.maxSteps <= 0) 1000 else param.maxSteps
+        debugger.beginRun
+        new Thread([
+            try {
+                var steps = 0
+                while (steps < maxSteps && !debugger.runCancelled && currentSimulation === sim) {
+                    val latch = debugger.armTick
+                    synchronized (this) {
+                        // Inputs stay as the client last set them.
+                        ClientInputs.values = null
+                        stepNumber++
+                        debugger.recordInputs(stepNumber, null)
+                    }
+                    sim.step()
+                    if (!SimulationDebugger.await(latch, 30)) {
+                        sendError("The simulation did not respond to a tick while running to a breakpoint.")
+                        return
+                    }
+                    steps++
+                    if (lastTick !== null && lastTick.breakpoint !== null) {
+                        return
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace
+                sendError("An error occurred while running to a breakpoint. " + e)
+            }
+        ], "Run to breakpoint").start
+    }
+
+    override pause() {
+        debugger.cancelRun
+    }
+
+    override history() {
+        val sim = currentSimulation
+        return CompletableFuture.completedFuture(debugger.history(sim, stepNumber))
+    }
+
+    override stepBack(StepBackParam param) {
+        return CompletableFuture.supplyAsync([doStepBack(param)])
+    }
+
+    /**
+     * Rewinds by restarting the executable and replaying the recorded inputs up to the wanted tick.
+     * Runs on its own thread: it waits for every replayed tick's notification.
+     */
+    private def StepBackResult doStepBack(StepBackParam param) {
+        val result = new StepBackResult
+        val sim = currentSimulation
+        if (sim === null || !debugger.isAttached(sim) || stepNumber < 0) {
+            result.message = "No simulation is running."
+            return result
+        }
+        if (SimulationDebugger.drivenByTrace(sim)) {
+            result.message = "The simulation replays a loaded trace, whose inputs cannot be rewound. Use the history instead."
+            return result
+        }
+        val target = Math.max(0, Math.min(if (param === null) 0 else param.toStep, stepNumber))
+        val started = System.currentTimeMillis
+        debugger.cancelRun
+        debugger.replaying = true
+        LSDiagramHighlightingHandler.suppressLayoutUpdates = true
+        try {
+            sim.stop
+            sim.reset
+            debugger.resetTracking
+            stepNumber = 0
+            sim.start(true)
+            for (i : 1 ..< target + 1) {
+                val latch = debugger.armTick
+                ClientInputs.values = debugger.recordedInputs(i)
+                stepNumber = i
+                sim.step()
+                if (!SimulationDebugger.await(latch, 30)) {
+                    throw new IllegalStateException("The simulation did not respond while replaying tick " + i + ".")
+                }
+            }
+            debugger.truncateInputs(target)
+        } catch (Exception e) {
+            e.printStackTrace
+            result.message = "The rewind failed: " + e.message
+            debugger.replaying = false
+            LSDiagramHighlightingHandler.suppressLayoutUpdates = false
+            return result
+        } finally {
+            debugger.replaying = false
+            LSDiagramHighlightingHandler.suppressLayoutUpdates = false
+        }
+        result.ok = true
+        result.step = target
+        result.replayMs = System.currentTimeMillis - started
+        lastTick = null
+        this.client.sendSimulationStepData(new DebugStepMessage => [
+            successful = true
+            error = ""
+            values = sim.dataPool.pool
+            step = target
+            watches = debugger.currentWatches(sim)
+            rewound = true
+        ])
+        // The highlighter followed every replayed tick; lay the diagram out once for the final state.
+        if (currentlySimulatedModel !== null) {
+            try {
+                updateLayout(currentlySimulatedModel)
+            } catch (Exception e) {
+                // No diagram is open for the model; there is nothing to refresh.
+            }
+        }
+        return result
+    }
+
+    override states(StatesParam param) {
+        val decodedUri = if (param?.uri === null) null else URLDecoder.decode(param.uri, "UTF-8")
+        val sim = currentSimulation
+        if (decodedUri !== null && decodedUri == currentlySimulatedModel && sim !== null && debugger.isAttached(sim)
+            && sim.sourceCompilationContext !== null) {
+            return CompletableFuture.completedFuture(debugger.states(sim.sourceCompilationContext.originalModel))
+        }
+        return requestManager.runRead [ cancelIndicator |
+            if (decodedUri === null) {
+                return new StatesResult => [message = "No model given."]
+            }
+            try {
+                debugger.states(getModelFromUri(decodedUri))
+            } catch (Exception e) {
+                new StatesResult => [message = "The model could not be read: " + e.message]
+            }
+        ]
+    }
+
     override startVisualizationServer() {
         // The KiVis visualization server is not part of this build.
         sendError("The simulation visualization server is not available in this server build.")
