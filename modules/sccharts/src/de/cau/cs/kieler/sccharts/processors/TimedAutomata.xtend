@@ -19,6 +19,7 @@ import de.cau.cs.kieler.annotations.Annotation
 import de.cau.cs.kieler.annotations.StringAnnotation
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
 import de.cau.cs.kieler.core.definitions.DynamicTicks
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.kexpressions.Declaration
 import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.kexpressions.FloatValue
@@ -379,19 +380,26 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
                                     }
                                     region = regionsUsingClock.head
                                     if (regionsUsingClock.size > 1) {
-                                        environment.errors.add("Cannot handle concurrent timed automata using the same clock. Add @" + USE_SD_NAME + " annotation for experimental support based on schduling directives.", state)
+                                        reportSharedClock(state, clock, "Clock " + clock.name + " is read by several concurrent regions of " + state.name + ".",
+                                            "Timed automata are expanded per region, so every region that tests a clock in its transitions needs " +
+                                            "its own clock: declare one clock per region and reset each on entry. The @" + USE_SD_NAME +
+                                            " annotation enables an experimental scheduling-directive expansion for shared clocks.")
                                     }
                                 }
                                 
                                 if (region === null) {
-                                    environment.errors.add("Cannot handle concurrent or hierarchical timed automata using the same clock. Add @" + USE_SD_NAME + " annotation for experimental support based on schduling directives.", state)
+                                    reportSharedClock(state, clock, "Clock " + clock.name + " is used across concurrent or nested regions of " + state.name + ".",
+                                        "A clock must be read by transitions of exactly one region. Declare a separate clock for each region " +
+                                        "that needs one, or use the @" + USE_SD_NAME + " annotation for the experimental scheduling-directive expansion.")
                                 } else {
                                     for (subState : region.states.filter[!it.connector].toList) {
                                         // error case
                                         if (subState.containsInnerActions || !subState.regions.nullOrEmpty) {
                                             if (subState.actions.exists[trigger?.eAllContents?.filter(ValuedObjectReference)?.exists[valuedObject == clock]] ||
                                                 subState.controlflowRegions.exists[eAllContents?.filter(ValuedObjectReference)?.exists[valuedObject == clock]]) {
-                                                    environment.errors.add("Cannot handle hierarchical timed automata. Add @" + USE_SD_NAME + " annotation for experimental support based on SDs.", subState)
+                                                    reportSharedClock(subState, clock, "Clock " + clock.name + " is read both by " + subState.name + " and inside it.",
+                                                        "A clock tested by the transitions of a state cannot also be tested inside that state. Give the inner " +
+                                                        "regions their own clock, or use the @" + USE_SD_NAME + " annotation for the experimental scheduling-directive expansion.")
                                             }
                                         }
                                         
@@ -667,5 +675,11 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
     
     static def findDeltaT(State rootState) {
         rootState.declarations.filterNull.map[valuedObjects].flatten.findFirst[DELTA_T_NAME.equalsIgnoreCase(name)]
+    }
+
+    /** Diagnostics: a timed-automata limitation as a located, explained issue at the state and the clock's declaration. */
+    private def reportSharedClock(State state, ValuedObject clock, String message, String hint) {
+        val issue = Issue.at("shared-clock", message, hint, state, clock)
+        environment.errors.add(null, issue.message, state, issue)
     }
 }

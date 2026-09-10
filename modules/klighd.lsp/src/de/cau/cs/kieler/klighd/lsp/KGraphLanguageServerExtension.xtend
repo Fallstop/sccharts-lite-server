@@ -22,6 +22,7 @@ import com.google.gson.internal.LazilyParsedNumber
 import com.google.inject.Inject
 import com.google.inject.Provider
 import com.google.inject.Singleton
+import org.eclipse.xtext.ide.server.ILanguageServerAccess
 import de.cau.cs.kieler.klighd.IAction.ActionContext
 import de.cau.cs.kieler.klighd.KlighdDataManager
 import de.cau.cs.kieler.klighd.SynthesisOption
@@ -125,6 +126,15 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
             }
         }
         return super.initialize(params)
+    }
+    
+    /**
+     * The access object Xtext hands to language server extensions. This server registers its extensions as
+     * JSON-RPC services rather than through the language modules, so Xtext never calls their
+     * {@code initialize(ILanguageServerAccess)}; the creator does it with this.
+     */
+    def ILanguageServerAccess getServerAccess() {
+        return languageServerAccess
     }
     
     // Fixes a NPE during initialization caused by an Xtext issue when initializing with no baseURI and no workspaceFolders.

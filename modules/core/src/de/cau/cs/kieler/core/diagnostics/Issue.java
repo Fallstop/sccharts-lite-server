@@ -17,6 +17,28 @@ public final class Issue {
 
     public Issue(String code, String message) { this.code = code; this.message = message; }
 
+    /** An issue located at the given model objects (through the copies made of them) with a hint from the analysis that found it. */
+    public static Issue at(String code, String message, String hint, org.eclipse.emf.ecore.EObject... objects) {
+        Issue issue = new Issue(code, message);
+        issue.hint = hint;
+        for (org.eclipse.emf.ecore.EObject object : objects) {
+            if (object != null) for (Location location : SourceTrace.locations(object)) SourceTrace.add(issue.locations, location);
+        }
+        return issue;
+    }
+
+    /** Variables assigned in the listed source ranges, in order of first appearance; what a message names. */
+    public static List<String> assignedSymbols(List<Location> locations) {
+        List<String> symbols = new ArrayList<>();
+        java.util.regex.Pattern assigned = java.util.regex.Pattern.compile("\\b([A-Za-z_]\\w*)(?=\\s*=(?!=))");
+        for (Location location : locations) {
+            if (location.label == null) continue;
+            java.util.regex.Matcher matcher = assigned.matcher(location.label);
+            while (matcher.find()) if (!symbols.contains(matcher.group(1))) symbols.add(matcher.group(1));
+        }
+        return symbols;
+    }
+
     public static final class Location {
         public String uri;
         public int offset;

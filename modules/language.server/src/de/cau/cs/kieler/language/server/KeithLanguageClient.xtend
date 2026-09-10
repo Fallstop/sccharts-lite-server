@@ -39,6 +39,13 @@ interface KeithLanguageClient extends KGraphLanguageClient, LanguageClient {
     def void cancelCompilation(boolean success);
     
     /**
+     * Issues the live analysis found in an open document after an edit, or an empty list to clear them.
+     * The parameter is a de.cau.cs.kieler.language.server.diagnostics.LiveDiagnosticsParam.
+     */
+    @JsonNotification("diagnostics/live")
+    def void liveDiagnostics(Object param)
+    
+    /**
      * Both objects should be List<de.cau.cs.kieler.language.server.kicool.SystemDescription>
      */
     @JsonNotification("kicool/compilation-systems")

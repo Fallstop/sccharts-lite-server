@@ -1,0 +1,31 @@
+system de.cau.cs.kieler.sccharts.live.analysis
+	label "Live scheduling analysis"
+    start config {
+       "de.cau.cs.kieler.sccharts.finalRegion.supported":false,
+       "de.cau.cs.kieler.sccharts.abort.abortRegions.supported":true
+    }
+
+// The front half of the netlist-based simulation chain, as far as the scheduler: enough to find
+// instantaneous loops and scheduling cycles while the model is being edited, without generating code.
+de.cau.cs.kieler.sccharts.processors.takenTransitionSignaling
+system de.cau.cs.kieler.sccharts.extended.core
+de.cau.cs.kieler.sccharts.scg.processors.SCG
+post process de.cau.cs.kieler.sccharts.scg.processors.abortRegion
+post process de.cau.cs.kieler.scg.processors.str
+post process de.cau.cs.kieler.scg.processors.sfr
+post process de.cau.cs.kieler.scg.processors.methods
+post process de.cau.cs.kieler.scg.processors.sequentialForkSurfaceDepthSeparator
+post process de.cau.cs.kieler.scg.processors.threadAnalyzer
+post process de.cau.cs.kieler.scg.processors.finalThreads
+de.cau.cs.kieler.scg.processors.dependency config {
+    "de.cau.cs.kieler.scg.processors.loopAnalyzer.warningOnInstantaneousLoop": true
+}
+post process de.cau.cs.kieler.scg.processors.loopAnalyzerV2
+pre process de.cau.cs.kieler.scg.processors.structuralDepthJoin
+de.cau.cs.kieler.scg.processors.basicBlocks
+post process de.cau.cs.kieler.scg.processors.expressions
+de.cau.cs.kieler.scg.processors.guards config {
+    "de.cau.cs.kieler.scg.processors.loopAnalyzer.considerAllDependencies": true,
+    "de.cau.cs.kieler.scg.processors.loopAnalyzer.warningOnInstantaneousLoop": false
+}
+de.cau.cs.kieler.scg.processors.scheduler

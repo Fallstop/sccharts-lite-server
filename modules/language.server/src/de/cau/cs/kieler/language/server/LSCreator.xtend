@@ -14,6 +14,7 @@ package de.cau.cs.kieler.language.server
 
 import de.cau.cs.kieler.core.services.KielerServiceLoader
 import de.cau.cs.kieler.klighd.lsp.KGraphLanguageClient
+import de.cau.cs.kieler.klighd.lsp.KGraphLanguageServerExtension
 import de.cau.cs.kieler.klighd.lsp.interactive.layered.LayeredInteractiveLanguageServerExtension
 import de.cau.cs.kieler.klighd.lsp.interactive.mrtree.MrTreeInteractiveLanguageServerExtension
 import de.cau.cs.kieler.klighd.lsp.interactive.rectpacking.RectpackingInteractiveLanguageServerExtension
@@ -57,9 +58,15 @@ class LSCreator extends AbstractLsCreator {
     
     override onConnect() {
         super.onConnect()
+        // The extensions are JSON-RPC services, not language-module bindings, so Xtext does not initialise them;
+        // give them the server's access object (documents, build events, client) here.
+        val serverAccess = injector.getInstance(KGraphLanguageServerExtension).serverAccess
         for (Object ext : iLanguageServerExtensions) {
             if (ext instanceof ILanguageClientProvider) {
                 ext.languageClient = languageClient
+            }
+            if (serverAccess !== null && ext instanceof ILanguageServerExtension) {
+                (ext as ILanguageServerExtension).initialize(serverAccess)
             }
         }
         constraints.client = languageClient as KGraphLanguageClient

@@ -14,6 +14,7 @@
  package de.cau.cs.kieler.scg.processors.analyzer
 
 import de.cau.cs.kieler.scg.diagnostics.Loops
+import de.cau.cs.kieler.core.diagnostics.Issue
 import com.google.inject.Inject
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
@@ -82,19 +83,6 @@ class LoopAnalyzerV2 extends InplaceProcessor<SCGraphs> {
     }
     
     override process() {
-        try {
-            doProcess()
-        } finally {
-            // Diagnostics: give the bare "Instantaneous loop detected!" message locations and an explanation.
-            try {
-                Loops.analyze(this)
-            } catch (Exception e) {
-                System.err.println("KIELER diagnostic tracing: " + e)
-            }
-        }
-    }
-
-    private def void doProcess() {
         val model = getModel
         val loopData = new LoopData(environment.getProperty(LOOP_DATA_PERSISTENT))
         val threadData = environment.getProperty(ThreadAnalyzer.THREAD_DATA)
@@ -111,23 +99,22 @@ class LoopAnalyzerV2 extends InplaceProcessor<SCGraphs> {
         }
                
         if (!loopData.criticalNodes.empty) {
+            // Diagnostics: the loops are reported as located, explained issues; the stripped loop model stays
+            // attached as a suppressed detail for the snapshot view.
             if (environment.getProperty(ERROR_ON_INSTANTANEOUS_LOOP)) {
-                environment.errors.add("Instantaneous loop detected!")
+                Loops.report(this, environment.errors, "error", loopData)
                 val strippedModel = extractLoopModel(loopData)
-                environment.errors.add(strippedModel.key, 
-                   "Instantaneous loop detected!", null)
+                environment.errors.add(strippedModel.key, Loops.MESSAGE, null, Issue.SUPPRESSED)
             }
             if (environment.getProperty(WARNING_ON_INSTANTANEOUS_LOOP)) {
-                environment.warnings.add("Instantaneous loop detected!")
+                Loops.report(this, environment.warnings, "warning", loopData)
                 val strippedModel = extractLoopModel(loopData)
-                environment.warnings.add(strippedModel.key, 
-                   "Instantaneous loop detected!", null)
+                environment.warnings.add(strippedModel.key, Loops.MESSAGE, null, Issue.SUPPRESSED)
             }
             if (environment.getProperty(INFO_ON_INSTANTANEOUS_LOOP)) {
-                environment.infos.add("Instantaneous loop detected!")
+                Loops.report(this, environment.infos, "info", loopData)
                 val strippedModel = extractLoopModel(loopData)
-                environment.infos.add(strippedModel.key, 
-                   "Instantaneous loop detected!", null)
+                environment.infos.add(strippedModel.key, Loops.MESSAGE, null, Issue.SUPPRESSED)
             }
             
             // Sequential fork does not support curing schizophrenia
@@ -135,7 +122,11 @@ class LoopAnalyzerV2 extends InplaceProcessor<SCGraphs> {
             // TODO Add support!
             for (fork : loopData.criticalNodes.filter(Fork)) {
                 if (fork.isNonParallel) {
-                    environment.errors.add("Sequential forks must not be schizophrenic!", fork, true)
+                    val issue = Issue.at("schizophrenic-fork", "A sequential region is re-entered in the tick it is left.",
+                        "The regions here run one after another instead of in parallel, so a region cannot be exited and " +
+                        "entered again within one tick. Make the transition that re-enters the enclosing state delayed, " +
+                        "or let the regions run in parallel.", fork)
+                    environment.errors.add(null, issue.message, fork, issue)
                 }
             }
         }
