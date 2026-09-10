@@ -27,6 +27,8 @@ import de.cau.cs.kieler.klighd.lsp.KGraphLanguageServerExtension
 import de.cau.cs.kieler.language.server.ILanguageClientProvider
 import de.cau.cs.kieler.language.server.KeithLanguageClient
 import de.cau.cs.kieler.language.server.kicool.data.CompilationResults
+import de.cau.cs.kieler.language.server.kicool.data.CompileProgressParam
+import de.cau.cs.kieler.language.server.kicool.data.ProcessorInfo
 import de.cau.cs.kieler.language.server.kicool.data.CompileParam
 import de.cau.cs.kieler.language.server.kicool.data.DidCompileParam
 import de.cau.cs.kieler.language.server.kicool.data.SendCompilationSystemsParam
@@ -173,7 +175,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
             if (param.snapshot) {
                 // Abort if no diagram can be found.
                 if (diagramState === null || diagramState.getKGraphContext(decodedUri) === null) {
-                    client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000))
+                    client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000, null))
                     return
                 }
                 model = diagramState.getKGraphContext(decodedUri).inputModel
@@ -182,7 +184,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
             }
             // Abort if no model to compile could be found.
             if (model === null) {
-                client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000))
+                client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000, null))
                 return
             }
             
@@ -451,12 +453,24 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
     def update(String uri, CompilationContext context, String clientId, String command, boolean inplace,
         boolean finished, boolean showResultingModel, int currentIndex, int maxIndex
     ) {
+        update(uri, context, clientId, command, inplace, finished, showResultingModel, currentIndex, maxIndex, null, null)
+    }
+    
+    /**
+     * As above, with the processor timeline of the compilation and the processor whose result this update carries.
+     */
+    def update(String uri, CompilationContext context, String clientId, String command, boolean inplace,
+        boolean finished, boolean showResultingModel, int currentIndex, int maxIndex,
+        CompilationTimeline timeline, ProcessorInfo currentProcessor
+    ) {
         try {
             val sameCompilation = command.equals(lastCommand) && uri.equals(lastUri) && inplace === lastInplace
             var future = new CompletableFuture()
             future.complete(void)
             future.thenAccept [
-                client.didCompile(new DidCompileParam(new CompilationResults(this.snapshotMap.get(uri), this.objectMap.get(uri), finished, uri), uri, finished, currentIndex, maxIndex))
+                val results = new CompilationResults(this.snapshotMap.get(uri), this.objectMap.get(uri), finished, uri)
+                timeline?.applyTo(results, finished, finished && compilationThread !== null && compilationThread.terminated)
+                client.didCompile(new DidCompileParam(results, uri, finished, currentIndex, maxIndex, currentProcessor))
             ].exceptionally [ throwable |
                 LOG.error('Error while sending compilation results.', throwable)
                 sendError('Error while sending compilation results.' + throwable)
@@ -518,6 +532,17 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
 //            ]
 //        }
 //    }
+    
+    /**
+     * Tells the client which processor just started.
+     */
+    def progress(String uri, ProcessorInfo processor, int finishedProcessors, int maxIndex, long elapsedMs) {
+        try {
+            client.compileProgress(new CompileProgressParam(uri, processor, finishedProcessors, maxIndex, elapsedMs))
+        } catch (Exception e) {
+            LOG.error('Error while sending compilation progress.', e)
+        }
+    }
     
     /**
      * Register observer to be included on start of new compilation.

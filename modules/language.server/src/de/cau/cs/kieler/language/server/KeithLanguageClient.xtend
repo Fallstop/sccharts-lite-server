@@ -14,6 +14,7 @@ package de.cau.cs.kieler.language.server
 
 import com.google.gson.JsonObject
 import de.cau.cs.kieler.klighd.lsp.KGraphLanguageClient
+import de.cau.cs.kieler.language.server.kicool.data.CompileProgressParam
 import de.cau.cs.kieler.language.server.kicool.data.DidCompileParam
 import de.cau.cs.kieler.language.server.kicool.data.SendCompilationSystemsParam
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
@@ -37,6 +38,12 @@ interface KeithLanguageClient extends KGraphLanguageClient, LanguageClient {
     
     @JsonNotification("kicool/cancel-compilation")
     def void cancelCompilation(boolean success);
+    
+    /**
+     * Sent when a compilation processor starts: which processor, how many finished before it and the elapsed time.
+     */
+    @JsonNotification("kicool/progress")
+    def void compileProgress(CompileProgressParam param);
     
     /**
      * Both objects should be List<de.cau.cs.kieler.language.server.kicool.SystemDescription>

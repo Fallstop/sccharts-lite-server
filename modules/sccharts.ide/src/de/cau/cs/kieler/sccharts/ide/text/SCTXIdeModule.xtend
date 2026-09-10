@@ -3,9 +3,35 @@
  */
 package de.cau.cs.kieler.sccharts.ide.text
 
+import de.cau.cs.kieler.sccharts.ide.text.hover.SCTXHoverService
+import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolDetailsProvider
+import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolKindProvider
+import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolNameProvider
+import org.eclipse.xtext.ide.server.hover.IHoverService
+import org.eclipse.xtext.ide.server.symbol.DocumentSymbolMapper.DocumentSymbolDetailsProvider
+import org.eclipse.xtext.ide.server.symbol.DocumentSymbolMapper.DocumentSymbolKindProvider
+import org.eclipse.xtext.ide.server.symbol.DocumentSymbolMapper.DocumentSymbolNameProvider
 
 /**
  * Use this class to register ide components.
  */
 class SCTXIdeModule extends AbstractSCTXIdeModule {
+
+    /** Hover cards built from the model (declaration, scope, transitions, comments), not only doc comments. */
+    def Class<? extends IHoverService> bindIHoverService() {
+        SCTXHoverService
+    }
+
+    /** Outline: simple names, element kinds and declaration details. */
+    def Class<? extends DocumentSymbolNameProvider> bindDocumentSymbolNameProvider() {
+        SCTXSymbolNameProvider
+    }
+
+    def Class<? extends DocumentSymbolKindProvider> bindDocumentSymbolKindProvider() {
+        SCTXSymbolKindProvider
+    }
+
+    def Class<? extends DocumentSymbolDetailsProvider> bindDocumentSymbolDetailsProvider() {
+        SCTXSymbolDetailsProvider
+    }
 }

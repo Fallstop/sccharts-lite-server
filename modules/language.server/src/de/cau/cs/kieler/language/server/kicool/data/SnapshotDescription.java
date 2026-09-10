@@ -12,6 +12,14 @@ public class SnapshotDescription {
     private int index, snapshotIndex;
     private List<String> errors = new ArrayList<>(), warnings = new ArrayList<>(), infos = new ArrayList<>();
     public List<Issue> diagnostics = new ArrayList<>();
+    /** Id of the processor that produced this snapshot, e.g. de.cau.cs.kieler.sccharts.scg.processors.SCG. */
+    public String processorId;
+    /** Wall time of the whole processor stage (pre/post processors included); absent on intermediate snapshots. */
+    public Long durationMs;
+    /** Time the processor started, in milliseconds since the compilation started. */
+    public Long startedAtMs;
+    /** ok, warning, error, skipped or cancelled. */
+    public String status;
 
     public SnapshotDescription(String name, int index, int snapshotIndex, Errors errors, Warnings warnings, Infos infos) {
         this.name = name; this.index = index; this.snapshotIndex = snapshotIndex;

@@ -87,6 +87,37 @@ class DidCompileParam {
      */
     int maxIndex
     
+    /**
+     * The processor whose result this notification carries (a {@code ProcessorInfo}), or null.
+     */
+    Object currentProcessor
+    
+}
+
+/**
+ * Identifies a processor of the running compilation.
+ */
+@Data
+class ProcessorInfo {
+    String id
+    String name
+    /** Index of the processor in the system's execution order, starting at 0. */
+    int index
+}
+
+/**
+ * Sent when a processor starts, so the client can show what the compiler is doing right now.
+ */
+@Data
+class CompileProgressParam {
+    String uri
+    ProcessorInfo processor
+    /** Number of processors that finished before this one. */
+    int index
+    /** Number of processors the system will run. */
+    int maxIndex
+    /** Milliseconds since the compilation started. */
+    long elapsedMs
 }
 
 /**

@@ -49,6 +49,9 @@ class KeithCompilationUpdater implements Observer {
     var int maxIndex = 0
     var int currentIndex = 0
     
+    /** Per-processor timings; created at compilation start. */
+    var CompilationTimeline timeline
+    
     new(KiCoolLanguageServerExtension kicoolExt, CompilationContext context, String uri, String clientId,
         String command, boolean inplace, boolean showResultingModel
     ) {
@@ -68,6 +71,9 @@ class KeithCompilationUpdater implements Observer {
                     return
                 }
                 kicoolExt.snapshotMap.get(uri).add(newArrayList)
+                if (timeline !== null) {
+                    kicoolExt.progress(uri, timeline.info(notification.processorInstance), timeline.finished, maxIndex, timeline.elapsedMs)
+                }
             }
             ProcessorSnapshot: {
                 if (kicoolExt.snapshotMap.isEmpty) {
@@ -81,11 +87,13 @@ class KeithCompilationUpdater implements Observer {
                 val warnings = environment.warnings
                 val infos = environment.infos
                 // Add snapshot
-                currentSnapshotList.add(new SnapshotDescription(processor.name, currentIndex, currentSnapshotList.length, errors, warnings, infos))
+                val description = new SnapshotDescription(processor.name, currentIndex, currentSnapshotList.length, errors, warnings, infos)
+                description.processorId = processor.id
+                currentSnapshotList.add(description)
                 // Add snapshot to map
                 kicoolExt.objectMap.get(uri).add(notification.snapshot)
-                maxIndex = context.processorInstances.length;
-                kicoolExt.update(uri, context, clientId, command, inplace, false, showResultingModel, currentIndex, maxIndex)
+                kicoolExt.update(uri, context, clientId, command, inplace, false, showResultingModel, currentIndex, maxIndex,
+                    timeline, timeline?.info(processor))
             }
             ProcessorFinished: {
                 if (kicoolExt.snapshotMap.isEmpty) {
@@ -98,23 +106,33 @@ class KeithCompilationUpdater implements Observer {
                 val errors = environment.errors
                 val warnings = environment.warnings
                 val infos = environment.infos
-                currentSnapshotList.add(new SnapshotDescription(processor.name, currentIndex, currentSnapshotList.length, errors, warnings, infos))
+                val description = new SnapshotDescription(processor.name, currentIndex, currentSnapshotList.length, errors, warnings, infos)
+                val snapshotIndex = kicoolExt.objectMap.get(uri).size
+                timeline?.finished(processor, snapshotIndex)
+                timeline?.decorate(description, processor)
+                currentSnapshotList.add(description)
                 kicoolExt.objectMap.get(uri).add(impl)
                 currentIndex++
                 if (!environment.logs.files.isEmpty) {
-                    currentSnapshotList.add(new SnapshotDescription(processor.name + " Log", currentIndex, currentSnapshotList.length, null, null, null))
+                    val log = new SnapshotDescription(processor.name + " Log", currentIndex, currentSnapshotList.length, null, null, null)
+                    log.processorId = processor.id
+                    currentSnapshotList.add(log)
                     kicoolExt.objectMap.get(uri).add(environment.logs)
-                    currentIndex++;
                 }
-                maxIndex = context.processorInstances.length
-                kicoolExt.update(uri, context, clientId, command, inplace, false, showResultingModel, currentIndex, maxIndex)
+                kicoolExt.update(uri, context, clientId, command, inplace, false, showResultingModel, currentIndex, maxIndex,
+                    timeline, timeline?.info(processor))
             }
             CompilationStart: {
                 kicoolExt.snapshotMap.put(uri, newLinkedList)
                 kicoolExt.objectMap.put(uri, newLinkedList)
+                timeline = new CompilationTimeline(context)
+                // The number of processors the system runs, not counting log snapshots.
+                maxIndex = timeline.size
+                currentIndex = 0
             }
             CompilationFinished: {
-                kicoolExt.update(uri, context, clientId, command, inplace, true, showResultingModel, currentIndex, maxIndex)
+                kicoolExt.update(uri, context, clientId, command, inplace, true, showResultingModel, currentIndex, maxIndex,
+                    timeline, null)
             }
         }
     }

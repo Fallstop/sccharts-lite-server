@@ -101,6 +101,26 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
 - `language.server`: `CompilationResults`/`SnapshotDescription` with `diagnostics`,
   `generatedFiles` and `generationError`; `GeneratedCode` validates and collects in-memory files.
 
+## Added since the fork
+
+- Compilation progress and timings (`language.server/kicool`): `keith/kicool/progress` is sent
+  when a processor starts (`{uri, processor: {id, name, index}, index, maxIndex, elapsedMs}`).
+  `didCompile` carries `currentProcessor`, and its `CompilationResults` carry `totalMs`,
+  `processorCount` and `processors` (id, name, status `ok|warning|error|skipped|cancelled`,
+  `durationMs`, `startedAtMs`, `snapshotIndex`), computed by `CompilationTimeline` from
+  KiCool's `TRANSFORMATION_TIME`/`PROCESSOR_TIME` environment properties. Each
+  `SnapshotDescription` names its `processorId` and, on the snapshot a processor finished with,
+  its `durationMs`, `startedAtMs` and `status`. `maxIndex` is the size of the flattened
+  processor sequence, and `currentIndex` counts finished processors (log snapshots no longer
+  inflate it).
+- SCTX editor services (`sccharts.ide/text/hover`, `text/symbols`, bound in `SCTXIdeModule`):
+  `SCTXHoverService` replaces Xtext's documentation-only hover with cards built from the model
+  (declaration source, kind, type, initial value, scope path, write/read counts, comments from
+  `CommentAnnotation`s or the hidden comments preceding the element; states with regions,
+  actions and transitions; transitions with priority, preemption, trigger and effects; regions
+  with initial/final states). The outline providers give simple names, LSP symbol kinds and
+  details. Definition, references and rename are Xtext's defaults and work unchanged.
+
 ## Other deviations from upstream
 
 - No Eclipse runtime: `org.eclipse.core.*`, Equinox and OSGi are excluded from the shade
