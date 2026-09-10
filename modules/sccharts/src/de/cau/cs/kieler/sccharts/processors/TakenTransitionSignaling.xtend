@@ -59,8 +59,10 @@ class TakenTransitionSignaling extends SCChartsProcessor {
         return transitions
     }
     
+    public static val ID = "de.cau.cs.kieler.sccharts.processors.takenTransitionSignaling"
+
     override getId() {
-        "de.cau.cs.kieler.sccharts.processors.takenTransitionSignaling"
+        ID
     }
     
     override getName() {

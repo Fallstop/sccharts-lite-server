@@ -53,6 +53,8 @@ public final class DebugMessages {
 
     public static final class AcceptedResult {
         public List<Accepted> accepted = new ArrayList<>();
+        /** How the executable signals taken transitions: "counters" (value change), "flags" (reset each tick), or "none". */
+        public String signaling;
     }
 
     public static final class Watch {

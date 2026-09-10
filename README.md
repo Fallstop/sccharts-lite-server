@@ -220,6 +220,14 @@ de.cau.cs.kieler...` includes of built-in chains.
 - `KeithWorkspaceManager` is a Guice singleton: server-wide extensions that inject
   `WorkspaceManager` now share the language server's instance and can listen to its builds.
 
+- `kicool/compilation/CompilationContext.compile` assigns `result` before notifying
+  `CompilationFinished`. Upstream notified first, so anything started from that notification (the
+  extension starts a simulation as soon as `didCompile` arrives) could read a null result for a
+  moment; `SimulationStateTracker` then chose the wrong transition-signaling mode and re-reported
+  every earlier transition on each tick. The tracker now also reads the mode from the
+  `takenTransitionSignaling` processor's own environment, and `setBreakpoints` answers with
+  `signaling: "counters" | "flags" | "none"`.
+
 ## Other deviations from upstream
 
 - No Eclipse runtime: `org.eclipse.core.*`, Equinox and OSGi are excluded from the shade

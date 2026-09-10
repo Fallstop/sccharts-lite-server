@@ -158,9 +158,11 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
         val endTimestamp = System.nanoTime
         EPrime.setProperty(COMPILATION_TIME, (endTimestamp - startTimestamp))
         
+        // The result must be visible before observers learn that the compilation finished: a client that
+        // starts the simulation on didCompile reads it on another thread right away.
+        result = EPrime
         notify(new CompilationFinished(this, EPrime))
 
-        result = EPrime
         EPrime
     }
     

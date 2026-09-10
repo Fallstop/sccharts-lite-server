@@ -13,6 +13,7 @@
 package de.cau.cs.kieler.sccharts.ide.simulation
 
 import com.google.gson.JsonArray
+import de.cau.cs.kieler.kicool.compilation.CompilationContext
 import de.cau.cs.kieler.kicool.ide.klighd.models.ModelChain
 import de.cau.cs.kieler.sccharts.Region
 import de.cau.cs.kieler.sccharts.SCCharts
@@ -45,6 +46,12 @@ class SimulationStateTracker {
 
     val List<Transition> transitions
 
+    /**
+     * Whether the transition array holds running counters (reset once, on entry of the root state) or
+     * flags that the root state's during action clears every tick. Read from the environment of the
+     * processor that generated the array, so that it is the mode the executable was built with.
+     */
+    @Accessors(PUBLIC_GETTER)
     val boolean valueChangeSignaling
 
     var List<Integer> lastTakenTransitionValues = newLinkedList
@@ -69,8 +76,25 @@ class SimulationStateTracker {
         }
         rootState = root
         transitions = if (root === null) newArrayList else TakenTransitionSignaling.getTransitions(root)
-        valueChangeSignaling = compileCtx !== null && compileCtx.result !== null
-            && (compileCtx.result.getProperty(TakenTransitionSignaling.USE_VALUE_CHANGE_SIGNALING) ?: false)
+        valueChangeSignaling = compileCtx !== null && compileCtx.isValueChangeSignaling
+    }
+
+    /**
+     * The signaling mode of the compiled executable. The processor's own environment is authoritative
+     * (it is what the processor read when it generated the array); the final environment only inherits it.
+     * Without any environment the processor's default applies.
+     */
+    private static def boolean isValueChangeSignaling(CompilationContext compileCtx) {
+        val processor = compileCtx.processorInstancesSequence?.findFirst[
+            TakenTransitionSignaling.ID == id
+        ]
+        val environment = if (processor !== null && processor.environment !== null) processor.environment
+            else compileCtx.result
+        if (environment === null) {
+            return TakenTransitionSignaling.USE_VALUE_CHANGE_SIGNALING.^default
+        }
+        return environment.getProperty(TakenTransitionSignaling.USE_VALUE_CHANGE_SIGNALING)
+            ?: TakenTransitionSignaling.USE_VALUE_CHANGE_SIGNALING.^default
     }
 
     static def State rootOf(Object model) {
@@ -115,7 +139,9 @@ class SimulationStateTracker {
             if (element.isJsonPrimitive && element.asJsonPrimitive.isNumber) {
                 val value = element.asInt
                 val lastValue = if (lastTakenTransitionValues.size > index) lastTakenTransitionValues.get(index) else 0
-                if (value != lastValue && index < transitions.size) {
+                // Counters only grow between resets; a flag is set for the tick it was taken in.
+                val taken = if (valueChangeSignaling) value > lastValue || (value != 0 && value < lastValue) else value != 0
+                if (taken && index < transitions.size) {
                     traversedTransitions.add(transitions.get(index))
                 }
                 newLastTakenTransitionValues.add(value)

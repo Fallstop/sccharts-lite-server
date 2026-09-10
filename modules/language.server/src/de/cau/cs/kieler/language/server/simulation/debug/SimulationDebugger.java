@@ -260,6 +260,7 @@ public final class SimulationDebugger {
 
     public synchronized AcceptedResult setBreakpoints(SetBreakpointsParam param) {
         AcceptedResult result = new AcceptedResult();
+        result.signaling = tracker == null || !tracker.isSupported() ? "none" : tracker.isValueChangeSignaling() ? "counters" : "flags";
         breakpoints.clear();
         if (param == null || param.breakpoints == null) return result;
         for (de.cau.cs.kieler.language.server.simulation.data.DebugMessages.Breakpoint given : param.breakpoints) {
