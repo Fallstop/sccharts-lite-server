@@ -76,9 +76,6 @@ interface SimulationCommandExtension {
      */
     @JsonRequest('saveTrace')
     def CompletableFuture<SavedTraceMessage> saveTrace(String fileUri);
-    
-    @JsonNotification('startVisualizationServer')
-    def void startVisualizationServer();
 
     // ---- Debugging: breakpoints, watches, history and rewinding ----
 

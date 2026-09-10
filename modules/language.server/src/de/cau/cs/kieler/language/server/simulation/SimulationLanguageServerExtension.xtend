@@ -623,9 +623,4 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
         ]
     }
 
-    override startVisualizationServer() {
-        // The KiVis visualization server is not part of this build.
-        sendError("The simulation visualization server is not available in this server build.")
-    }
-
 }

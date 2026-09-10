@@ -63,7 +63,7 @@ run: the C compiler is `-Dsccharts.cc=<path>` or `$SCCHARTS_CC`, falling back to
   see below), the Xtext editor integration, the wizard and the editor-cursor `SmartCollapseHook` are gone
   (the hook's behaviour lives on as the `keith/diagram/cursor` request, see below).
 - `simulation.ide`: the Jetty/WebSocket visualization server (`server/` package) and the remote
-  values processor. `keith/simulation/startVisualizationServer` now reports that it is unavailable.
+  values processor. `keith/simulation/startVisualizationServer` is gone with it.
   `SimulationPreferences` keeps values in a map instead of a JFace preference store.
 - `kicool.ide`: the EMF Compare tracing tree comparator.
 - The `kico`/`scc` command-line front ends and their vendored picocli.
