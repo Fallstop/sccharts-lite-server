@@ -282,6 +282,16 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         return absolute;
     }
 
+    /** Two keys name the same file, also when only one of them could be resolved to its real path. */
+    private static boolean sameFile(String a, String b) {
+        if (a.equals(b)) return true;
+        try {
+            return Files.isSameFile(Path.of(a), Path.of(b));
+        } catch (IOException | RuntimeException e) {
+            return a.equalsIgnoreCase(b);
+        }
+    }
+
     private static boolean isKicoFile(Path path) {
         return Files.isRegularFile(path) && path.getFileName().toString().endsWith("." + EXTENSION);
     }
@@ -452,7 +462,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         } else {
             String owner = ID_BY_FILE.entrySet().stream().filter(entry -> entry.getValue().equals(system.getId()))
                 .map(Map.Entry::getKey).findFirst().orElse(null);
-            if (owner != null && !owner.equals(key(resource.getURI()))) {
+            if (owner != null && !sameFile(owner, key(resource.getURI()))) {
                 errors = true;
                 loaded.diagnostics.add(diagnostic("'" + system.getId() + "' is already defined in " + sourceOf(system.getId()), DiagnosticSeverity.Error, loaded.idRange));
             }
