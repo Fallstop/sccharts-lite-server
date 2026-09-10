@@ -122,7 +122,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     private static String key(URI uri) {
         if (uri.isFile()) {
             try {
-                return Path.of(uri.toFileString()).toAbsolutePath().normalize().toString();
+                return canonical(Path.of(uri.toFileString())).toString();
             } catch (Exception e) {
                 return uri.toString();
             }
@@ -231,7 +231,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
 
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
-                        if (isKicoFile(file)) candidates.add(URI.createFileURI(file.toAbsolutePath().toString()));
+                        if (isKicoFile(file)) candidates.add(URI.createFileURI(canonical(file).toString()));
                         return FileVisitResult.CONTINUE;
                     }
 
@@ -245,14 +245,33 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
             }
         }
         Set<String> seen = new LinkedHashSet<>();
-        for (URI uri : candidates) {
-            seen.add(key(uri));
-            load(uri, changes);
-        }
+        for (URI uri : candidates) seen.add(key(uri));
+        // Vanished (or re-spelled) files go first, so a file that comes back under another key does not
+        // collide with its own earlier registration.
         for (String file : new ArrayList<>(files.keySet())) {
             if (!seen.contains(file)) unload(file, changes);
         }
+        for (URI uri : candidates) load(uri, changes);
         publish(changes);
+    }
+
+    /**
+     * One spelling per file: the real path resolves symlinks and Windows 8.3 short names (a client may say
+     * {@code C:\\Users\\RUNNER~1} for what Xtext calls {@code C:\\Users\\runneradmin}); on a case-insensitive
+     * file system the drive letter is lowered as well.
+     */
+    private static Path canonical(Path path) {
+        Path absolute = path.toAbsolutePath().normalize();
+        try {
+            absolute = absolute.toRealPath();
+        } catch (IOException | RuntimeException e) {
+            // A file that vanished keeps its normalised spelling.
+        }
+        String text = absolute.toString();
+        if (text.length() > 1 && text.charAt(1) == ':' && Character.isUpperCase(text.charAt(0))) {
+            return Path.of(Character.toLowerCase(text.charAt(0)) + text.substring(1));
+        }
+        return absolute;
     }
 
     private static boolean isKicoFile(Path path) {
@@ -272,7 +291,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
                     URI path = project.getProjectConfig() == null ? null : project.getProjectConfig().getPath();
                     if (path != null && path.isFile()) {
                         Path directory = Path.of(path.toFileString());
-                        if (directory.getParent() != null && Files.isDirectory(directory.getParent())) roots.add(directory.getParent());
+                        if (directory.getParent() != null && Files.isDirectory(directory.getParent())) roots.add(canonical(directory.getParent()));
                     }
                 }
             } catch (Exception e) {
@@ -281,7 +300,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         }
         for (String folder : clientWorkspaceFolders) {
             Path path = Path.of(folder);
-            if (path.isAbsolute() && Files.isDirectory(path)) roots.add(path.normalize());
+            if (path.isAbsolute() && Files.isDirectory(path)) roots.add(canonical(path));
         }
         return new ArrayList<>(roots);
     }
@@ -293,11 +312,11 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         for (String extra : extraFolders) {
             Path path = Path.of(extra);
             if (path.isAbsolute()) {
-                if (Files.isDirectory(path)) result.add(path.normalize());
+                if (Files.isDirectory(path)) result.add(canonical(path));
             } else {
                 for (Path root : roots) {
                     Path candidate = root.resolve(path);
-                    if (Files.isDirectory(candidate)) result.add(candidate.normalize());
+                    if (Files.isDirectory(candidate)) result.add(canonical(candidate));
                 }
             }
         }
