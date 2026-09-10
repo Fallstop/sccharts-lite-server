@@ -81,12 +81,16 @@ class EObjectSerializer implements JsonSerializer<EObject> {
         if (KRendering.isAssignableFrom(source.class)) {
             val propertyHolder = source as KRendering
             
-            var properties = propertyHolder.allProperties;
             var HashMap<String, Object> copiedPropertyMap = newHashMap
-    
-            for (propertyKVPair : properties.entrySet()) {
-                if (KGraphMappingUtil.keepProperty(propertyKVPair.key)) {
-                    copiedPropertyMap.put(propertyKVPair.key.id, propertyKVPair.value)
+            // lsp4j converts messages to JSON on the sending thread without a lock, so two overlapping
+            // responses can serialise the same rendering at once; EMF creates the map's entry-set view
+            // lazily and the second reader then sees a null view (NullPointerException in entrySet).
+            synchronized (propertyHolder) {
+                var properties = propertyHolder.allProperties;
+                for (propertyKVPair : properties.entrySet()) {
+                    if (KGraphMappingUtil.keepProperty(propertyKVPair.key)) {
+                        copiedPropertyMap.put(propertyKVPair.key.id, propertyKVPair.value)
+                    }
                 }
             }
 
