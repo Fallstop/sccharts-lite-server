@@ -120,7 +120,10 @@ class CursorSyncLanguageServerExtension implements ILanguageServerExtension, Cur
             if (diagramUri === null || !sameDocument(diagramUri, uri)) {
                 return CursorResult.fail("The diagram shows another file")
             }
-            viewContext = diagramState.getKGraphContext(URLDecoder.decode(diagramUri, "UTF-8"))
+            // The updater keys the context by the client's own spelling of the URI (percent-encoded on
+            // Windows); decoding is only a fallback for callers that stored it decoded.
+            viewContext = diagramState.getKGraphContext(diagramUri)
+                ?: diagramState.getKGraphContext(URLDecoder.decode(diagramUri, "UTF-8"))
             input = viewContext?.inputModel
         }
         if (viewContext === null || viewContext.viewer === null || viewContext.viewModel === null) {

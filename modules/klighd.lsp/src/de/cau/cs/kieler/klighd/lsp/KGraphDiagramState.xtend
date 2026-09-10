@@ -125,7 +125,19 @@ class KGraphDiagramState {
      * @param uri The identifying URI of the graph to access the value in the map.
      */
     def ViewContext getKGraphContext(String uri) {
-        kGraphContexts.get(uri)
+        val direct = kGraphContexts.get(uri)
+        if (direct !== null || uri === null) {
+            return direct
+        }
+        // The map is keyed by the client's spelling of the URI; callers that decoded it (or received the
+        // server's own spelling, which differs on Windows: ~ against %7E) still mean the same file.
+        val wanted = java.net.URLDecoder.decode(uri, "UTF-8")
+        for (entry : kGraphContexts.entrySet) {
+            if (wanted.equals(java.net.URLDecoder.decode(entry.key, "UTF-8"))) {
+                return entry.value
+            }
+        }
+        return null
     }
     
     /**
