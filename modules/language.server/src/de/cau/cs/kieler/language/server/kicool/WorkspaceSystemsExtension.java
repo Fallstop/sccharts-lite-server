@@ -370,7 +370,10 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     /** Loads one file: from the language server's copy when it is part of the workspace, else from disk. */
     private void load(URI uri, SystemsChangedParam changes) {
         String key = key(uri);
-        String file = lspUri(uri);
+        // Diagnostics for a file must always go out under one spelling of its URI, or a client that
+        // received them under the first spelling keeps showing them after they are cleared under another.
+        WorkspaceSystemInfo known = files.get(key);
+        String file = known != null && known.file != null ? known.file : lspUri(uri);
         Loaded loaded = null;
         try {
             if (languageServer != null) {
