@@ -122,7 +122,10 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     private static String key(URI uri) {
         if (uri.isFile()) {
             try {
-                return canonical(Path.of(uri.toFileString())).toString();
+                String file = uri.toFileString();
+                // EMF cannot spell every URI as a file (a percent-encoded drive letter, for one); java.net can.
+                Path path = file != null ? Path.of(file) : Path.of(new java.net.URI(uri.toString()));
+                return canonical(path).toString();
             } catch (Exception e) {
                 return uri.toString();
             }
@@ -354,14 +357,14 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
             if (languageServer != null) {
                 loaded = languageServer.doRead(file, (resource, cancel) -> {
                     if (!(resource instanceof XtextResource)) return null;
-                    return inspect((XtextResource) resource, cancel);
+                    return inspect((XtextResource) resource, cancel, key);
                 }).get();
             }
         } catch (Exception e) {
             LOG.debug("Reading " + file + " through the language server failed; loading it from disk", e);
         }
         try {
-            if (loaded == null) loaded = inspect(parse(uri), CancelIndicator.NullImpl);
+            if (loaded == null) loaded = inspect(parse(uri), CancelIndicator.NullImpl, key);
         } catch (Exception e) {
             loaded = new Loaded();
             loaded.diagnostics.add(diagnostic("Cannot load compilation system: " + e, DiagnosticSeverity.Error, new Range(new Position(0, 0), new Position(0, 1))));
@@ -433,7 +436,8 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     }
 
     /** Validates the resource and checks the ids it references; the system is returned only when there is no error. */
-    private static Loaded inspect(XtextResource resource, CancelIndicator cancel) {
+    /** @param key the loaded file's own key, so that a re-read file is never its own rival for an id */
+    private static Loaded inspect(XtextResource resource, CancelIndicator cancel, String key) {
         Loaded loaded = new Loaded();
         IResourceValidator validator = resource.getResourceServiceProvider().getResourceValidator();
         boolean errors = false;
@@ -462,7 +466,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         } else {
             String owner = ID_BY_FILE.entrySet().stream().filter(entry -> entry.getValue().equals(system.getId()))
                 .map(Map.Entry::getKey).findFirst().orElse(null);
-            if (owner != null && !sameFile(owner, key(resource.getURI()))) {
+            if (owner != null && !owner.equals(key) && !sameFile(owner, key)) {
                 errors = true;
                 loaded.diagnostics.add(diagnostic("'" + system.getId() + "' is already defined in " + sourceOf(system.getId()), DiagnosticSeverity.Error, loaded.idRange));
             }
