@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.sccharts.processors
 
+import de.cau.cs.kieler.core.diagnostics.Issue
 import com.google.common.collect.HashMultimap
 import com.google.common.collect.Iterables
 import com.google.common.collect.LinkedHashMultimap
@@ -143,7 +144,10 @@ class Inheritance extends SCChartsProcessor implements Traceable {
                         replacements.put(baseVO, newVO)
                         voStore.update(newVO, "inherited")
                     } else if (voNames.containsKey(newVO.name)) {
-                        environment.errors.add("Conflicting variable declaration with name " + newVO.name + " in inheritance hierarchy.", baseVO, true)
+                        val issue = Issue.at("inheritance-conflict", "Variable " + newVO.name + " is declared again along the inheritance hierarchy.",
+                            "An inheriting SCChart sees every variable of its base charts; a second declaration with the same name is ambiguous. " +
+                            "Rename one of them, or drop the redeclaration and use the inherited variable.", baseVO, newVO)
+                        environment.errors.add(null, issue.message, baseVO, issue)
                     } else {
                         replacements.put(baseVO, newVO)
                         if (!(newVO.declaration instanceof ReferenceDeclaration)) {
@@ -180,7 +184,10 @@ class Inheritance extends SCChartsProcessor implements Traceable {
             }
             for (conflict : regionNames.keySet.filter[regionNames.get(it).size > 1]) {
                 for (r : regionNames.get(conflict)) {
-                    environment.errors.add("Conflicting region with name " + r.name + " in inheritance hierarchy.", r, true)
+                    val issue = Issue.at("inheritance-conflict", "Region " + r.name + " exists more than once along the inheritance hierarchy.",
+                        "Regions of base charts are merged into the inheriting chart by name, so two regions with the same name would collide. " +
+                        "Rename one of the regions.", r)
+                    environment.errors.add(null, issue.message, r, issue)
                 }
             }
             

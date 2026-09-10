@@ -7,8 +7,13 @@ import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.kexpressions.keffects.*;
 import de.cau.cs.kieler.scg.*;
 
-/** Extracts cycle witnesses from exactly the dependency kinds used by SimpleGuardScheduler. */
+/**
+ * Explains a graph the guard scheduler could not order: a dependency cycle over exactly the dependency kinds the
+ * scheduler follows, with a short witness and the source ranges of the operations on it.
+ */
 public final class Scheduling {
+    public static final String CODE = "scheduling-cycle";
+    public static final String NOT_SCHEDULABLE = "The SCG is NOT asc-schedulable!";
     private final Map<Node, List<Dependency>> outgoing = new IdentityHashMap<>();
     private final Map<Node, Integer> index = new IdentityHashMap<>(), low = new IdentityHashMap<>();
     private final Set<Node> active = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -16,8 +21,21 @@ public final class Scheduling {
     private final List<Set<Node>> components = new ArrayList<>();
     private int next;
 
-    public static void analyze(Processor<?, ?> processor, SCGraph graph) {
-        if (processor.getEnvironment().getErrors().getAllMessages().stream().noneMatch(m -> String.valueOf(m.getMessage()).contains("NOT asc-schedulable"))) return;
+    /** Called by the scheduler when it found the graph unschedulable; reports one issue per dependency cycle. */
+    public static void report(Processor<?, ?> processor, SCGraph graph) {
+        List<Issue> issues = issues(graph);
+        for (Issue issue : issues) processor.getEnvironment().getErrors().add(null, issue.message, graph, issue);
+        if (issues.isEmpty()) return;
+        // The scheduler's per-edge messages repeat what the cycle witness explains.
+        for (de.cau.cs.kieler.kicool.environments.MessageObjectLink message : processor.getEnvironment().getErrors().getAllRootMessages()) {
+            String text = String.valueOf(message.getMessage());
+            if (message.getPayload() == null && (text.startsWith("Can't schedule") || text.contains("NOT asc-schedulable"))) message.setPayload(Issue.SUPPRESSED);
+        }
+    }
+
+    /** The dependency cycles of the graph as issues, without touching any environment. */
+    public static List<Issue> issues(SCGraph graph) {
+        List<Issue> issues = new ArrayList<>();
         Scheduling analysis = new Scheduling();
         for (Node node : graph.getNodes()) {
             List<Dependency> edges = new ArrayList<>();
@@ -33,7 +51,7 @@ public final class Scheduling {
         for (Set<Node> component : analysis.components) {
             List<Dependency> witness = analysis.witness(component);
             if (witness.isEmpty()) continue;
-            Issue issue = new Issue("scheduling-cycle", "Circular dependency prevents scheduling this tick.");
+            Issue issue = new Issue(CODE, "Circular dependency prevents scheduling this tick.");
             issue.hint = "Give shared state one owner, separate request and acknowledgement, or deliberately read the previous tick's value. These choices change timing; review the intended behaviour.";
             for (Dependency dependency : witness) {
                 Node from = (Node) dependency.eContainer(), to = (Node) dependency.getTarget();
@@ -49,14 +67,11 @@ public final class Scheduling {
                 issue.cycle.add(edge);
             }
             issue.details = component.size() + " generated operations are in this dependency cycle. Other unscheduled operations may be consequences of this conflict.";
-            processor.getEnvironment().getErrors().add(null, issue.message, graph, issue);
+            List<String> symbols = Issue.assignedSymbols(issue.locations);
+            if (!symbols.isEmpty()) issue.message = "Circular dependency involving " + String.join(", ", symbols) + " prevents scheduling this tick.";
+            issues.add(issue);
         }
-        if (analysis.components.isEmpty()) return;
-        // The scheduler's per-edge messages repeat what the cycle witness explains.
-        for (de.cau.cs.kieler.kicool.environments.MessageObjectLink message : processor.getEnvironment().getErrors().getAllRootMessages()) {
-            String text = String.valueOf(message.getMessage());
-            if (message.getPayload() == null && (text.startsWith("Can't schedule") || text.contains("NOT asc-schedulable"))) message.setPayload(Issue.SUPPRESSED);
-        }
+        return issues;
     }
 
     private static String name(Node node) {

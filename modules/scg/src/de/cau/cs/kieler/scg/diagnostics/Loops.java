@@ -13,42 +13,50 @@ import de.cau.cs.kieler.scg.Conditional;
 import de.cau.cs.kieler.scg.Node;
 import de.cau.cs.kieler.scg.processors.analyzer.*;
 
-/** Gives the loop analyzer's bare "Instantaneous loop detected!" message source locations and an explanation. */
+/** Structured issues for the loops the loop analyzer found: located on the source model and explained. */
 public final class Loops {
-    static final String MESSAGE = "Instantaneous loop detected!";
+    public static final String CODE = "instantaneous-loop";
+    public static final String MESSAGE = "Instantaneous loop detected!";
 
-    public static void analyze(Processor<?, ?> processor) {
-        Environment environment = processor.getEnvironment();
-        LoopData data = environment.getProperty(LoopAnalyzerV2.LOOP_DATA);
-        if (data == null) return;
+    /** One issue per loop, ready for the processor to report with the given severity. */
+    public static List<Issue> issues(Processor<?, ?> processor, String severity, LoopData data) {
+        List<Issue> issues = new ArrayList<>();
+        if (data == null) return issues;
         List<Set<Node>> loops = new ArrayList<>();
         for (SingleLoop loop : data.getLoops()) if (!loop.getCriticalNodes().isEmpty()) loops.add(loop.getCriticalNodes());
         if (loops.isEmpty() && !data.getCriticalNodes().isEmpty()) loops.add(data.getCriticalNodes());
-        if (loops.isEmpty()) return;
-        attach(processor, environment.getErrors(), "error", loops);
-        attach(processor, environment.getWarnings(), "warning", loops);
-        attach(processor, environment.getInfos(), "info", loops);
+        for (Set<Node> loop : loops) {
+            Issue issue = issue(processor, severity, loop);
+            // Several loops through the same operations are one finding.
+            boolean known = false;
+            for (Issue other : issues) if (other.message.equals(issue.message) && sameLocations(other, issue)) known = true;
+            if (!known) issues.add(issue);
+        }
+        return issues;
     }
 
-    private static void attach(Processor<?, ?> processor, MessageObjectReferences messages, String severity, List<Set<Node>> loops) {
-        if (messages == null) return;
-        List<MessageObjectLink> bare = new ArrayList<>();
-        for (MessageObjectLink message : messages.getAllRootMessages()) {
-            if (MESSAGE.equals(message.getMessage()) && message.getPayload() == null) bare.add(message);
+    /** Reports the loops into the given message list, keeping the analyzer's bare text as a suppressed detail. */
+    public static void report(Processor<?, ?> processor, MessageObjectReferences messages, String severity, LoopData data) {
+        List<Issue> issues = issues(processor, severity, data);
+        if (issues.isEmpty()) {
+            messages.add(MESSAGE);
+            return;
         }
-        if (bare.isEmpty()) return;
-        List<Issue> issues = new ArrayList<>();
-        for (Set<Node> loop : loops) issues.add(issue(processor, severity, loop));
-        // The analyzer reports once per environment; every further loop becomes its own message.
-        bare.get(0).setPayload(issues.get(0));
-        for (MessageObjectLink extra : bare.subList(1, bare.size())) extra.setPayload(Issue.SUPPRESSED);
-        for (Issue issue : issues.subList(1, issues.size())) messages.add(null, issue.message, null, issue);
+        for (Issue issue : issues) messages.add(null, issue.message, null, issue);
+    }
+
+    private static boolean sameLocations(Issue a, Issue b) {
+        if (a.locations.size() != b.locations.size()) return false;
+        for (int i = 0; i < a.locations.size(); i++) {
+            if (a.locations.get(i).offset != b.locations.get(i).offset || !a.locations.get(i).uri.equals(b.locations.get(i).uri)) return false;
+        }
+        return true;
     }
 
     private static Issue issue(Processor<?, ?> processor, String severity, Set<Node> loop) {
         Timed timed = Timed.of(processor, loop);
-        Issue issue = new Issue("instantaneous-loop", timed == null
-            ? "A loop can run again within the same tick."
+        Issue issue = new Issue(CODE, timed == null
+            ? "Potential instantaneous loop."
             : "Potential instantaneous loop through the timed transitions on " + timed.clockList() + ".");
         issue.severity = severity;
         issue.hint = timed == null
@@ -74,6 +82,10 @@ public final class Loops {
         locations.sort(Comparator.comparingInt((Issue.Location location) -> location.offset));
         if (locations.size() > 12) locations = new ArrayList<>(locations.subList(0, 12));
         issue.locations.addAll(locations);
+        if (timed == null) {
+            List<String> symbols = Issue.assignedSymbols(locations);
+            if (!symbols.isEmpty()) issue.message = "Potential instantaneous loop through " + String.join(", ", symbols) + ".";
+        }
         issue.details = "Loop analyzer: " + MESSAGE + " " + loop.size() + " generated operations lie on this loop"
             + (locations.isEmpty() ? " and none carries a source location." : ".")
             + (timed == null ? "" : " The loop is control flow only (no data dependency) through the timed-automata expansion of "

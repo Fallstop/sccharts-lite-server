@@ -69,19 +69,6 @@ class SimpleGuardScheduler extends InplaceProcessor<SCGraphs> implements Traceab
 	 * {@inherited}
 	 */
     def void schedule(SCGraph scg) {
-        try {
-            doSchedule(scg)
-        } finally {
-            // Diagnostics: when the graph is not schedulable, explain it as a dependency cycle with source ranges.
-            try {
-                Scheduling.analyze(this, scg)
-            } catch (Exception e) {
-                System.err.println("KIELER diagnostic tracing: " + e)
-            }
-        }
-    }
-
-    private def void doSchedule(SCGraph scg) {
     	/** 
     	 * The {@code nodesToSchedule} {@link Set} contains the nodes that are still
     	 * not scheduled. The topological sort should remove nodes after they have been placed.
@@ -110,8 +97,13 @@ class SimpleGuardScheduler extends InplaceProcessor<SCGraphs> implements Traceab
     	
     	// ASC schedulability output
     	if (schedule.size < estimatedScheduleSize) {
-    	    environment.errors.add("The SCG is NOT asc-schedulable!")
-    		//System.out.println("The SCG is NOT asc-schedulable!")
+    	    environment.errors.add(Scheduling.NOT_SCHEDULABLE)
+    	    // Diagnostics: explain the failure as a dependency cycle with source ranges, right where it is known.
+    	    try {
+    	        Scheduling.report(this, scg)
+    	    } catch (Exception e) {
+    	        System.err.println("KIELER diagnostic tracing: " + e)
+    	    }
     		if (unschedulableNodes.size > 0) {
     		    if (annotationModelCreatorDelegate !== null) {
     		      annotationModelCreatorDelegate.create(unschedulableNodes, environment)

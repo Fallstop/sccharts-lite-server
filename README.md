@@ -89,9 +89,15 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   `NativeDiagnostics` (gcc output to structured issues, hooked in
   `AbstractSystemCompilerProcessor.invoke`). `CompilationContext.compile` starts both traces and
   stops on the first failing processor.
-- `scg/diagnostics`: `Scheduling` (cycle witness for non-schedulable graphs, from
-  `SimpleGuardScheduler.schedule`) and `Loops` (located, explained instantaneous-loop messages,
-  from `LoopAnalyzerV2.process`); `CCodeGeneratorLogicModule.serializeToCode` records fragments.
+- `scg/diagnostics`: `Scheduling` (cycle witness for non-schedulable graphs; the scheduler
+  calls `Scheduling.report` the moment it finds the graph unschedulable and the message names the
+  variables involved) and `Loops` (`LoopAnalyzerV2` asks it for one located, explained issue per
+  loop instead of adding a bare message; the stripped loop model stays attached as a suppressed
+  detail); `CCodeGeneratorLogicModule.serializeToCode` records fragments. `Issue.at` builds a
+  located issue with a hint from any model objects; `TimedAutomata` (shared clocks, code
+  `shared-clock`), `Inheritance` (`inheritance-conflict`) and the loop analyzer's schizophrenic
+  sequential fork (`schizophrenic-fork`) use it. Every other message that carries a model object
+  is located through `SourceTrace.locations`, so it survives the copies the chain makes.
 - `simulation/diagnostics`: `SimulationStrings` rewrites the C simulation template so string
   inputs outlive their JSON message.
 - `klighd.lsp`: trace strings on diagram elements (`KGraphDiagramGenerator.publishTraces`),
@@ -101,6 +107,17 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   `AbstractLanguageServer.addToMainThreadQueue`.
 - `language.server`: `CompilationResults`/`SnapshotDescription` with `diagnostics`,
   `generatedFiles` and `generationError`; `GeneratedCode` validates and collects in-memory files.
+- `language.server/diagnostics`: `LiveDiagnosticsExtension` analyses open `.sctx` documents after
+  every edit. It listens to Xtext's build (`ILanguageServerAccess.addBuildListener`), waits for the
+  edits to settle (default 400 ms, `keith/diagnostics/configure {enabled, debounceMs}`), takes a
+  traced copy of the model under the read lock and compiles it on its own thread through
+  `de.cau.cs.kieler.sccharts.live.analysis` (`scg/system`): the netlist simulation chain as far as
+  the scheduler, no code generation. Located issues go to the client as
+  `keith/diagnostics/live {uri, version, issues, durationMs, reason}`; a newer edit cancels a
+  running analysis and its result is dropped. `keith/diagnostics/analyze uri` runs it on demand.
+  Because the KIELER extensions are JSON-RPC services rather than language-module bindings,
+  Xtext never called their `initialize(ILanguageServerAccess)`; `LSCreator.onConnect` now does,
+  through `KGraphLanguageServerExtension.getServerAccess`.
 - `language.server/diagram`: `keith/diagram/cursor` request `{uri, offset, clientId, mode}` →
   `{ok, message?, element?, expanded, collapsed}`, the LSP form of `sccharts.ui`'s removed
   `SmartCollapseHook`. The offset is resolved with `EObjectAtOffsetHelper` inside an
