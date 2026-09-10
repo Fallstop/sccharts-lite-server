@@ -110,6 +110,20 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     });
 
     private WorkspaceManager workspaceManager;
+
+    /** Runs on the worker; an executor would swallow a failure, which then only shows as silence. */
+    private void submit(Runnable task) {
+        worker.submit(() -> {
+            try {
+                task.run();
+            } catch (RuntimeException | Error e) {
+                LOG.error("Workspace compilation systems: " + e, e);
+                System.err.println("Workspace compilation systems failed: " + e);
+                e.printStackTrace();
+                if (client != null) client.sendMessage("Workspace compilation systems: " + e, "error");
+            }
+        });
+    }
     private UriExtensions uriExtensions;
     private KGraphLanguageServerExtension languageServer;
     private KeithLanguageClient client;
@@ -193,7 +207,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         if (changed.isEmpty() && scanned) return;
         // The build holds the write lock; reading the resources back goes through the request manager and must
         // not happen on this thread.
-        worker.submit(() -> {
+        submit(() -> {
             if (!scanned) {
                 // The first build: the workspace is complete now, so load everything, including root-level
                 // files that are not part of any Xtext project.
@@ -213,7 +227,7 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     public void systemFolders(SystemFoldersParam param) {
         extraFolders = param == null || param.folders == null ? new ArrayList<>() : new ArrayList<>(param.folders);
         clientWorkspaceFolders = param == null || param.workspaceFolders == null ? new ArrayList<>() : new ArrayList<>(param.workspaceFolders);
-        worker.submit(this::rescan);
+        submit(this::rescan);
     }
 
     @Override
