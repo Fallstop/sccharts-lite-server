@@ -12,7 +12,6 @@
  */
 package de.cau.cs.kieler.language.server.kicool;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
@@ -121,16 +120,29 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     /** Files are keyed by their normalised path; URIs differ in spelling between EMF, Xtext and the client. */
     private static String key(URI uri) {
         if (uri.isFile()) {
-            try {
-                String file = uri.toFileString();
-                // EMF cannot spell every URI as a file (a percent-encoded drive letter, for one); java.net can.
-                Path path = file != null ? Path.of(file) : Path.of(new java.net.URI(uri.toString()));
-                return canonical(path).toString();
-            } catch (Exception e) {
-                return uri.toString();
-            }
+            Path path = toPath(uri);
+            if (path != null) return canonical(path).toString();
         }
         return uri.toString();
+    }
+
+    /**
+     * The file behind a {@code file:} URI. EMF's {@code toFileString} keeps an empty authority as a
+     * leading {@code //}, which Windows reads as a malformed UNC path ({@code \\\C:\...}), so a URI with
+     * a device is assembled from its parts; a real authority (a UNC share) goes through EMF.
+     */
+    private static Path toPath(URI uri) {
+        try {
+            if (uri.device() != null) return Path.of(uri.device() + URI.decode(uri.path()));
+            if (uri.authority() != null && !uri.authority().isEmpty()) return Path.of(uri.toFileString());
+            return Path.of(URI.decode(uri.path()));
+        } catch (RuntimeException e) {
+            try {
+                return Path.of(new java.net.URI(uri.toString()));
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
     }
 
     /** The URI spelling the client uses ({@code file:///...}), for diagnostics and reports. */
@@ -315,8 +327,8 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
                 for (ProjectManager project : workspaceManager.getProjectManagers()) {
                     // Xtext's catch-all "unknown" project has no path.
                     URI path = project.getProjectConfig() == null ? null : project.getProjectConfig().getPath();
-                    if (path != null && path.isFile()) {
-                        Path directory = Path.of(path.toFileString());
+                    Path directory = path != null && path.isFile() ? toPath(path) : null;
+                    if (directory != null) {
                         if (directory.getParent() != null && Files.isDirectory(directory.getParent())) roots.add(canonical(directory.getParent()));
                     }
                 }
@@ -350,7 +362,9 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     }
 
     private static boolean isFile(URI uri) {
-        return uri.isFile() && new File(uri.toFileString()).isFile();
+        if (!uri.isFile()) return false;
+        Path path = toPath(uri);
+        return path != null && Files.isRegularFile(path);
     }
 
     /** Loads one file: from the language server's copy when it is part of the workspace, else from disk. */
