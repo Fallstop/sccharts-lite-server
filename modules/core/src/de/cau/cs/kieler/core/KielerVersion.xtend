@@ -15,7 +15,6 @@ package de.cau.cs.kieler.core
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.URL
-import org.osgi.framework.FrameworkUtil
 
 /**
  * Provides access to the version of the running kieler.
@@ -29,11 +28,7 @@ class KielerVersion {
     static def String getVersion() {
         var URL versionFileURL
         try {
-            if (Platform.isEclipsePlatformRunning) {
-                versionFileURL = FrameworkUtil.getBundle(KielerVersion).getResource(VERSION_FILE_NAME)
-            } else {
-                versionFileURL = KielerVersion.classLoader.getResource(VERSION_FILE_NAME)
-            }
+            versionFileURL = KielerVersion.classLoader.getResource(VERSION_FILE_NAME)
         } catch (Exception e) {
             // ignore
         }

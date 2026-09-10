@@ -12,6 +12,7 @@
  */
 package de.cau.cs.kieler.kicool.compilation
 
+import de.cau.cs.kieler.kicool.deploy.HostTools
 import java.io.File
 import org.eclipse.xtend.lib.annotations.FinalFieldsConstructor
 import org.eclipse.xtend.lib.annotations.Accessors
@@ -55,7 +56,7 @@ class ExecutableJarContainer extends ExecutableContainer {
     override getProcessBuilder() {
         var jarPath = file.toString
         if (jarPath.contains(" ")) jarPath = "\"" + jarPath + "\""
-        val pb = new ProcessBuilder("java", "-jar", jarPath)
+        val pb = new ProcessBuilder(HostTools.javaLauncher, "-jar", jarPath)
         pb.environment.putAll(processEnvironment)
         return pb
     }  

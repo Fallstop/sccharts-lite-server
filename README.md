@@ -10,7 +10,7 @@ bytecode patch added is ordinary source here.
 
 | | upstream fat JAR | this build |
 |---|---|---|
-| size | 93.8 MB | 29.2 MB |
+| size | 93.8 MB | 31.3 MB |
 | clean build | Tycho, ~14 min CI | `mvn clean install`, ~1 min |
 | JDK | 17 (built), 11+ (run) | 21 |
 | KLighD / ELK / Xtext / lsp4j | 3.0.2 / 0.9.1 / 2.34 / 0.20 | 3.1.0 / 0.11.0 / 2.37 / 0.23.1 |
@@ -28,13 +28,29 @@ bytecode patch added is ordinary source here.
 - `modules/klighd.lsp` — KLighD's language server bundle, built from source so that its
   concurrency fixes are source edits; the other KLighD artifacts come from Maven Central.
 - `server/` — maven-shade module producing `server/target/sccharts-lite-server.jar`,
-  main class `de.cau.cs.kieler.language.server.LanguageServer`.
+  main class `de.cau.cs.kieler.language.server.LanguageServer`. Always build with `clean`:
+  the shade plugin happily re-shades a stale jar otherwise.
 
 ## Build
 
 ```sh
 mvn -B clean install -DskipTests
 ```
+
+### Running on a trimmed JDK
+
+The server runs on a `jlink` image with these modules (verified by the SCCharts Lab server
+suites): `java.base, java.compiler, java.desktop, java.logging, java.management, java.naming,
+java.rmi, java.sql, java.xml, jdk.unsupported, jdk.zipfs`. `java.desktop` provides the AWT font
+metrics KLighD lays text out with; `jdk.zipfs` is the `jar:` file system the deploy processors
+copy C templates out of the jar with. Java simulation additionally spawns `javac` and `jar`, taken
+from the running JVM when present (`HostTools`), else from PATH.
+
+### Host tools
+
+`de.cau.cs.kieler.kicool.deploy.HostTools` decides which external programs the deploy processors
+run: the C compiler is `-Dsccharts.cc=<path>` or `$SCCHARTS_CC`, falling back to `gcc` on PATH;
+`java`, `javac` and `jar` come from the running JVM's `bin/` when it ships them.
 
 ## What was removed relative to upstream's language server
 
@@ -53,6 +69,13 @@ mvn -B clean install -DskipTests
 - Transitive ballast cut at the pom level: Eclipse workbench and e4 (via `elk.core.service`),
   JNA (via `core.resources`), the Jakarta EE API set (via sprotty-server), EMF Edit, the
   StringTemplate/ANTLR 2 tool jars, log4j 2.
+- The Eclipse workspace (`core.resources`, `core.filesystem`, `core.expressions`) and every
+  OSGi code path in KIELER's own sources (`KielerServiceLoader`, `KielerVersion`, `Platform`,
+  the bundle activators). `core.runtime`, `equinox.registry/preferences` and `org.eclipse.osgi`
+  remain on the classpath, unstarted, because ELK's `ElkServicePlugin` subclasses
+  `org.eclipse.core.runtime.Plugin` and EMF/Xtext/ELK/KLighD check `Platform.isRunning()`.
+- Content-assist parsers of every grammar but SCTX; those languages bind
+  `NoContentAssistService` plus stand-in lexer/parser so their Guice modules still resolve.
 
 ## Diagnostics and fixes carried as source
 

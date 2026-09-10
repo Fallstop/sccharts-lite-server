@@ -53,7 +53,6 @@ import java.util.List
 import java.util.Map
 import java.util.ServiceLoader
 import java.util.Set
-import org.eclipse.core.runtime.Platform
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.data.LayoutOptionData
 import org.eclipse.elk.core.data.LayoutOptionData.Visibility
@@ -313,22 +312,13 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
                 imagesUpdated = true
             } else {
                 val images = new ArrayList<Pair<Pair<String, String>, String>>
-                val platformIsRunning = Klighd.IS_PLATFORM_RUNNING;
                 for (notCached : action.notCached) {
                     try {
                         val bundle = notCached.key
                         val path = notCached.value
-                        val InputStream imageStream =
-                            if (platformIsRunning) {
-                                // If the platform is running, the image can be found in the bundle under the resource path.
-                                Platform.getBundle(bundle)
-                                    ?.getResource(path)
-                                    ?.openStream
-                            } else {
-                                // In the jar or plain Java application case, the bundle is ignored and the file path
-                                // is searched on the classpath directly
-                                this.class.getResourceAsStream("/" + path)
-                            }
+                        // sccharts-lite is a plain Java application: the bundle is ignored and the file path
+                        // is searched on the classpath directly.
+                        val InputStream imageStream = this.class.getResourceAsStream("/" + path)
                         if (imageStream !== null) {
                             try {
                                 val imageBytes = ByteStreams.toByteArray(imageStream)

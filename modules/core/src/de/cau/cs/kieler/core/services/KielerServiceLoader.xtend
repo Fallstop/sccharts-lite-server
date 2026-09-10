@@ -12,10 +12,7 @@
  */
 package de.cau.cs.kieler.core.services
 
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.util.ServiceLoader
-import org.osgi.framework.FrameworkUtil
 
 /**
  * ServiceLoader adapted to the KIELER project.
@@ -36,24 +33,7 @@ class KielerServiceLoader {
      * @return An iterable with instances of all implementing classes.
      */
     static def <S> Iterable<S> load(Class<S> service) {
-        val context = FrameworkUtil.getBundle(KielerServiceLoader)?.bundleContext
-        if (context !== null) {
-            val serviceClasses = <Class<? extends S>>newHashSet
-            for (bundle : context.bundles) {
-                try {
-                    val file = bundle.getResource("/META-INF/services/" + service.canonicalName)
-                    if (file !== null) {
-                        val reader = new BufferedReader(new InputStreamReader(file.openStream))
-                        reader.lines.forEach[serviceClasses += bundle.loadClass(it) as Class<? extends S>]
-                        reader.close
-                    }
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
-            return serviceClasses.filterNull.map[getConstructor?.newInstance].filterNull
-        } else {
-            return ServiceLoader.load(service)
-        }
+        // sccharts-lite runs without OSGi: implementations are always found through META-INF/services.
+        return ServiceLoader.load(service)
     }
 }

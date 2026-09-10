@@ -42,6 +42,7 @@ class Platform {
     }
     
     static def isEclipsePlatformRunning() {
-        return org.eclipse.core.runtime.Platform.isRunning()
+        // sccharts-lite never runs inside Equinox.
+        return false
     }
 }

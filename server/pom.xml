@@ -23,20 +23,14 @@
               <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
             </transformers>
             <artifactSet>
-              <!-- No Equinox/Eclipse runtime: the server runs on plain Java. equinox.common stays because
-                   EMF, Xtext, ELK and KLighD mention IStatus, IProgressMonitor, IPath and
-                   OperationCanceledException in signatures and instanceof checks. -->
+              <!-- No Eclipse workspace: the server runs on plain Java and never starts Equinox. The
+                   core.runtime/registry/preferences/osgi jars stay on the classpath unstarted because
+                   ELK's core.service (KLighD's layout engine) subclasses org.eclipse.core.runtime.Plugin
+                   and EMF, Xtext, ELK and KLighD check Platform.isRunning() before touching them. -->
               <excludes>
-                <exclude>org.eclipse.platform:org.eclipse.core.runtime</exclude>
                 <exclude>org.eclipse.platform:org.eclipse.core.resources</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.core.jobs</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.core.contenttype</exclude>
                 <exclude>org.eclipse.platform:org.eclipse.core.expressions</exclude>
                 <exclude>org.eclipse.platform:org.eclipse.core.filesystem</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.equinox.registry</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.equinox.preferences</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.equinox.app</exclude>
-                <exclude>org.eclipse.platform:org.eclipse.osgi</exclude>
               </excludes>
             </artifactSet>
             <filters>

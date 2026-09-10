@@ -17,6 +17,7 @@ import de.cau.cs.kieler.core.properties.Property
 import de.cau.cs.kieler.kicool.compilation.CCodeFile
 import de.cau.cs.kieler.kicool.compilation.ExecutableContainer
 import de.cau.cs.kieler.kicool.deploy.AdditionalResources.Type
+import de.cau.cs.kieler.kicool.deploy.HostTools
 import de.cau.cs.kieler.kicool.deploy.ProjectInfrastructure
 import java.io.File
 import java.nio.file.Files
@@ -31,7 +32,7 @@ import static extension de.cau.cs.kieler.kicool.deploy.AdditionalResources.*
 class CCompiler extends AbstractSystemCompilerProcessor<Object, ExecutableContainer> {
 
     public static val IProperty<String> CC_PATH = 
-        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.c.path", "gcc")
+        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.c.path", HostTools.cCompiler)
         
     public static val IProperty<String> EXE_NAME = 
         new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.c.result", "main.exe")

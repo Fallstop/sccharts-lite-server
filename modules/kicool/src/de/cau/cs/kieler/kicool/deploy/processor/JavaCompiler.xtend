@@ -18,6 +18,7 @@ import de.cau.cs.kieler.kicool.compilation.ExecutableContainer
 import de.cau.cs.kieler.kicool.compilation.ExecutableJarContainer
 import de.cau.cs.kieler.kicool.compilation.JavaCodeFile
 import de.cau.cs.kieler.kicool.deploy.AdditionalResources.Type
+import de.cau.cs.kieler.kicool.deploy.HostTools
 import de.cau.cs.kieler.kicool.deploy.ProjectInfrastructure
 import java.io.File
 import java.nio.file.Files
@@ -32,10 +33,10 @@ import static extension de.cau.cs.kieler.kicool.deploy.AdditionalResources.*
 class JavaCompiler extends AbstractSystemCompilerProcessor<Object, ExecutableContainer> {
 
     public static val IProperty<String> JAVAC_PATH = 
-        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.java.path", "javac")
+        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.java.path", HostTools.javaCompiler)
 
     public static val IProperty<String> JAR_PATH = 
-        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.java.jar.path", "jar")
+        new Property<String>("de.cau.cs.kieler.kicool.deploy.compiler.java.jar.path", HostTools.jarTool)
             
     public static val IProperty<Boolean> JAR = 
         new Property<Boolean>("de.cau.cs.kieler.kicool.deploy.compiler.java.jar", true)

@@ -6,6 +6,13 @@ package de.cau.cs.kieler.kexpressions.ide.keffects;
 import org.eclipse.xtext.ide.editor.contentassist.IPrefixMatcher;
 import org.eclipse.xtext.ide.editor.contentassist.FQNPrefixMatcher;
 import de.cau.cs.kieler.core.ls.NoContentAssistService;
+import com.google.inject.Binder;
+import com.google.inject.name.Names;
+import de.cau.cs.kieler.core.ls.NoContentAssistLexer;
+import de.cau.cs.kieler.core.ls.NoContentAssistParser;
+import org.eclipse.xtext.ide.LexerIdeBindings;
+import org.eclipse.xtext.ide.editor.contentassist.antlr.IContentAssistParser;
+import org.eclipse.xtext.ide.editor.contentassist.antlr.internal.Lexer;
 import org.eclipse.xtext.ide.server.contentassist.ContentAssistService;
 import org.eclipse.xtext.ide.DefaultIdeModule;
 import org.eclipse.xtext.ide.refactoring.IRenameStrategy2;
@@ -36,6 +43,17 @@ public abstract class AbstractKEffectsIdeModule extends DefaultIdeModule {
 	// sccharts-lite: this grammar's content-assist parser is not part of the build.
 	public Class<? extends ContentAssistService> bindContentAssistService() {
 		return NoContentAssistService.class;
+	}
+	
+	// sccharts-lite: the content-assist service still injects a lexer and parser, so bind stand-ins.
+	public void configureContentAssistLexer(Binder binder) {
+		binder.bind(Lexer.class)
+			.annotatedWith(Names.named(LexerIdeBindings.CONTENT_ASSIST))
+			.to(NoContentAssistLexer.class);
+	}
+	
+	public Class<? extends IContentAssistParser> bindIContentAssistParser() {
+		return NoContentAssistParser.class;
 	}
 	
 }

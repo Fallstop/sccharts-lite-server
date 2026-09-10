@@ -17,7 +17,6 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.net.MalformedURLException
-import org.osgi.framework.Bundle
 
 /**
  * Specified class loader for processor prototyping.
@@ -31,7 +30,6 @@ class KiCoolClassLoader extends ClassLoader {
     
     val classPaths = <String, String> newHashMap
     val classLoader = <ClassLoader> newLinkedList
-    val bundles = <Bundle> newLinkedList
     
     new(ClassLoader classLoader) {
         super(classLoader)
@@ -44,10 +42,6 @@ class KiCoolClassLoader extends ClassLoader {
     
     def addAdditionalClassLoader(ClassLoader classLoader) {
         this.classLoader += classLoader 
-    }
-    
-    def addAdditionalBundle(Bundle bundle) {
-        this.bundles += bundle
     }
     
     override Class<?> loadClass(String className) {
@@ -72,13 +66,6 @@ class KiCoolClassLoader extends ClassLoader {
             }
         }
         
-        for(b : this.bundles) {
-            try {
-                val ret = b.loadClass(className)
-                return ret
-            } catch (Exception e) {
-            }
-        }
         return super.loadClass(className);
     }       
 
