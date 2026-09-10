@@ -7,6 +7,8 @@ public class WorkspaceSystemInfo {
     public String label;
     public boolean loaded;
     public String error;
+    /** The server's canonical path for the file; diagnostic, it tells why two spellings did or did not meet. */
+    public String key;
 
     public WorkspaceSystemInfo() {}
 

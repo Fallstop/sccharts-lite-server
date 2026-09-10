@@ -208,7 +208,12 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
     public CompletableFuture<List<WorkspaceSystemInfo>> workspaceSystems() {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (files) {
-                List<WorkspaceSystemInfo> result = new ArrayList<>(files.values());
+                List<WorkspaceSystemInfo> result = new ArrayList<>();
+                for (Map.Entry<String, WorkspaceSystemInfo> entry : files.entrySet()) {
+                    WorkspaceSystemInfo info = entry.getValue();
+                    info.key = entry.getKey();
+                    result.add(info);
+                }
                 result.sort(Comparator.comparing(info -> info.file));
                 return result;
             }
