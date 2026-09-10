@@ -191,6 +191,35 @@ under `language.server/.../simulation/debug` and `sccharts.ide/.../simulation/Si
   `CompilationThread` first preempts background analyses, then takes the gate; the live analysis takes
   it around its own compile and reschedules itself if it was stopped for a user compile.
 
+## Features beyond upstream
+
+### Compilation systems from the workspace
+
+Upstream registered `.kico` systems through an Eclipse extension point and a `Register` class,
+both gone here. `language.server/.../kicool/WorkspaceSystemsExtension` replaces them: every
+`.kico` inside a workspace folder (skipping `node_modules`, `target`, `out`, `dist`, `build`,
+`bin`, `kieler-gen` and dot-directories, eight levels deep) is parsed with the KiCool Xtext
+injector, validated, and registered with `KiCoolRegistration.registerTemporarySystem`. The
+systems then appear in `keith/kicool/compilation-systems` next to the built-in ones, with a
+`source` field naming the file, and compile like any other system, including `system
+de.cau.cs.kieler...` includes of built-in chains.
+
+- Loading is triggered by the first Xtext build after `initialized`, by every later build that
+  touches a `.kico` (`didOpen`/`didChange` of the file in the editor, so unsaved edits count, and
+  `workspace/didChangeWatchedFiles` for edits and deletions on disk), and by
+  `keith/kicool/systemFolders` `{ folders, workspaceFolders }`, which also adds directories
+  outside the workspace (absolute, or relative to each workspace folder).
+- `keith/kicool/systemsChanged` `{ added, removed, errors }` tells the client what a load changed;
+  `keith/kicool/workspaceSystems` lists every file looked at, loaded or not.
+- Problems are never silent: Xtext's syntax and linking issues, an id that shadows a built-in
+  system or another workspace file, and unknown processor or system ids (checked against the
+  registry) are published as diagnostics on the `.kico` file and reported in `errors`.
+- `kicool.ide` now registers `kico` as a language of the server (`KiCoolIdeSetup` implements
+  `ILSSetup`), so `.kico` files get parsing and validation in the editor. It touches
+  `KiCoolRegistration` first so that the IDE injector is the one left in Xtext's registry.
+- `KeithWorkspaceManager` is a Guice singleton: server-wide extensions that inject
+  `WorkspaceManager` now share the language server's instance and can listen to its builds.
+
 ## Other deviations from upstream
 
 - No Eclipse runtime: `org.eclipse.core.*`, Equinox and OSGi are excluded from the shade
