@@ -388,16 +388,18 @@ public class WorkspaceSystemsExtension implements ILanguageServerExtension, Work
         // received them under the first spelling keeps showing them after they are cleared under another.
         WorkspaceSystemInfo known = files.get(key);
         String file = known != null && known.file != null ? known.file : lspUri(uri);
+        // The read goes through Xtext under the spelling the build reported, which is the one it indexes.
+        String readUri = lspUri(uri);
         Loaded loaded = null;
         try {
             if (languageServer != null) {
-                loaded = languageServer.doRead(file, (resource, cancel) -> {
+                loaded = languageServer.doRead(readUri, (resource, cancel) -> {
                     if (!(resource instanceof XtextResource)) return null;
                     return inspect((XtextResource) resource, cancel, key);
-                }).get();
+                }).get(20, java.util.concurrent.TimeUnit.SECONDS);
             }
         } catch (Exception e) {
-            LOG.debug("Reading " + file + " through the language server failed; loading it from disk", e);
+            LOG.debug("Reading " + readUri + " through the language server failed; loading it from disk", e);
         }
         try {
             if (loaded == null) loaded = inspect(parse(uri), CancelIndicator.NullImpl, key);
