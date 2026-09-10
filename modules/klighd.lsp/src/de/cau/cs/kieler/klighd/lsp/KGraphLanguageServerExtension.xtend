@@ -48,6 +48,7 @@ import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.sprotty.ActionMessage
 import org.eclipse.sprotty.DiagramOptions
@@ -476,7 +477,12 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
         // implementation when no diagramHighlightService can be found.
         
         // this is from super.super.documentHighlight
-        val CompletableFuture<List<? extends DocumentHighlight>> result = requestManager.runRead [ cancelIndicator |
+        //
+        // The editor sends a highlight request on every cursor move. When its buffer and the server's copy of the
+        // document have drifted apart (a lost or duplicated didChange), the requested position may lie past the end
+        // of the server's line, and Document.getOffSet throws. Highlights are cosmetic, so answer with none instead
+        // of failing the request. The diagram selection runs inside the same read so it cannot race a write.
+        requestManager.runRead [ cancelIndicator |
             val uri = params.textDocument.uri.toUri;
             val serviceProvider = languagesRegistry
                 .getResourceServiceProvider(uri)
@@ -485,24 +491,34 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
                 return emptyList
             
             return workspaceManager.doRead(uri) [doc, resource |
+                val List<? extends DocumentHighlight> none = emptyList
+                if (!doc.contains(params.position)) {
+                    return none
+                }
+                if (shouldSelectDiagram) {
+                    val diagramHighlightService = serviceProvider.get(DiagramHighlightService)
+                        ?: diagramHighlightServiceProvider.get
+                    val offset = doc.getOffSet(params.position)
+                    diagramServerManager.findDiagramServersByUri(uri.toString).forEach [ server |
+                        diagramHighlightService.selectElementFor(server, resource, offset)
+                    ]
+                }
                 service.getDocumentHighlights(doc, resource, params, cancelIndicator)
             ]
-        ];
-        if (shouldSelectDiagram) {
-            val URI uri = params.textDocument.uri.toUri
-            workspaceManager.doRead(uri) [ doc, resource |
-                val diagramHighlightService = languagesRegistry
-                    .getResourceServiceProvider(uri)
-                    .get(DiagramHighlightService)
-                    ?: diagramHighlightServiceProvider.get
-                val offset = doc.getOffSet(params.position)
-                diagramServerManager.findDiagramServersByUri(uri.toString).forEach [ server |
-                    diagramHighlightService.selectElementFor(server, resource, offset)
-                ]
-                null
-            ]
+        ]
+    }
+    
+    /**
+     * Whether the document has a character or line end at the given position, i.e. whether
+     * {@link org.eclipse.xtext.ide.server.Document#getOffSet} would resolve it without throwing.
+     */
+    private def boolean contains(org.eclipse.xtext.ide.server.Document doc, Position position) {
+        try {
+            doc.getOffSet(position)
+            return true
+        } catch (IndexOutOfBoundsException e) {
+            return false
         }
-        result
     }
     
     override setPreferences(Map<String, Object> prefs) {
