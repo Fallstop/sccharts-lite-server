@@ -14,6 +14,7 @@ package de.cau.cs.kieler.language.server.kicool
 
 import java.lang.Thread
 import de.cau.cs.kieler.kicool.compilation.CompilationContext
+import de.cau.cs.kieler.kicool.compilation.CompileGate
 import org.eclipse.xtend.lib.annotations.Accessors
 
 /**
@@ -33,7 +34,14 @@ class CompilationThread extends Thread {
     
     override run()  {
         this.name = "Compilation Thread"
-        context.compile()
+        // Background analyses stop first, then this compilation runs alone (see CompileGate).
+        CompileGate.preempt()
+        CompileGate.lock()
+        try {
+            context.compile()
+        } finally {
+            CompileGate.unlock()
+        }
         return
     }
 }

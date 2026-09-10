@@ -36,6 +36,7 @@ import de.cau.cs.kieler.core.diagnostics.Issue;
 import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.kicool.compilation.CompilationContext;
 import de.cau.cs.kieler.kicool.compilation.Compile;
+import de.cau.cs.kieler.kicool.compilation.CompileGate;
 import de.cau.cs.kieler.kicool.compilation.Processor;
 import de.cau.cs.kieler.kicool.deploy.ProjectInfrastructure;
 import de.cau.cs.kieler.kicool.environments.Environment;
@@ -77,6 +78,11 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
 
     private ILanguageServerAccess access;
     private KeithLanguageClient client;
+
+    public LiveDiagnosticsExtension() {
+        // A user compile must not wait behind a background analysis: it cancels the running one first.
+        CompileGate.addPreemptor(this::cancelRunning);
+    }
 
     @Override
     public void initialize(ILanguageServerAccess access) {
@@ -204,7 +210,15 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
             context.setStopOnError(true);
             running = context;
             if (!current(uri, generation)) return;
-            context.compile();
+            // Never overlap a user compile: it corrupts the SCG extension caches (CompileGate). A user compile
+            // requested meanwhile cancels this one through the preemptor registered in the constructor.
+            CompileGate.lock();
+            try {
+                if (!current(uri, generation)) return;
+                context.compile();
+            } finally {
+                CompileGate.unlock();
+            }
             cancelled = Boolean.TRUE.equals(context.getStartEnvironment().getProperty(Environment.CANCEL_COMPILATION));
             for (Issue issue : SnapshotDescription.issues(context)) {
                 if (!issue.locations.isEmpty()) issues.add(issue);
@@ -215,7 +229,12 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
         } finally {
             if (running == context) running = null;
         }
-        if (cancelled || !current(uri, generation)) return;
+        if (!current(uri, generation)) return;
+        if (cancelled) {
+            // Stopped for a user compile rather than by a newer edit: the document still needs its result.
+            schedule(uri, debounceMs);
+            return;
+        }
         publish(uri, snapshot.version, issues, (System.nanoTime() - start) / 1_000_000, issues.isEmpty() ? "clean" : null);
     }
 

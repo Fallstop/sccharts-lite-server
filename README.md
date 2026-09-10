@@ -185,6 +185,12 @@ under `language.server/.../simulation/debug` and `sccharts.ide/.../simulation/Si
   drives the inputs. `keith/simulation/states {uri}` lists a model's states with qualified
   names and name offsets, marking the active ones while it is simulated.
 
+- `kicool/compilation/CompileGate`: one compilation at a time per JVM. The SCG extensions keep
+  per-injector caches that two overlapping compilations corrupt (seen as a null scheduling block in
+  `SurfaceSynchronizer` when a user compile ran during a live analysis of the same file). The user's
+  `CompilationThread` first preempts background analyses, then takes the gate; the live analysis takes
+  it around its own compile and reschedules itself if it was stopped for a user compile.
+
 ## Other deviations from upstream
 
 - No Eclipse runtime: `org.eclipse.core.*`, Equinox and OSGi are excluded from the shade
