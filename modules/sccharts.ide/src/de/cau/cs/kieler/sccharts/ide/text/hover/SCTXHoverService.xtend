@@ -26,7 +26,9 @@ class SCTXHoverService extends HoverService {
 
     override getContents(EObject element) {
         try {
-            return provider.markdown(element) ?: ""
+            // Xtend templates break lines with the platform separator; Markdown wants plain newlines
+            // (and the hover test compares against them on every platform).
+            return (provider.markdown(element) ?: "").replace("\r\n", "\n")
         } catch (Exception e) {
             // A hover must never fail a request; an empty card is the fallback.
             return ""
