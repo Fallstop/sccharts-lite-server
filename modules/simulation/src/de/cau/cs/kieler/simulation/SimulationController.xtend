@@ -90,6 +90,7 @@ class SimulationController implements SimulationControls {
         
         if (async) {
             asyncCancelled.set(false)
+            asyncJobQueue.clear()
             asyncWorker = new Thread([runAsyncWorker], "Simulation")
             asyncWorker.daemon = true
             asyncWorker.start()
@@ -111,6 +112,18 @@ class SimulationController implements SimulationControls {
         if (asynchronous) {
             asyncCancelled.set(true)
             asyncJobQueue.offer(new SimulationControlEvent(context, SimulationOperation.STOP))
+            // A start that follows at once (a rewind restarts the executable) would otherwise race this
+            // worker for the queue: the new worker could take the STOP and die, leaving every later step
+            // unanswered. Wait for the old worker to leave, then drop whatever is still queued.
+            val worker = asyncWorker
+            if (worker !== null && worker !== Thread.currentThread && worker.alive) {
+                try {
+                    worker.join(5000)
+                } catch (InterruptedException e) {
+                    Thread.currentThread.interrupt
+                }
+            }
+            asyncJobQueue.clear()
         }
         
         running = false
