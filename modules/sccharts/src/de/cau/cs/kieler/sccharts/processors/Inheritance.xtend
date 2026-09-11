@@ -145,8 +145,7 @@ class Inheritance extends SCChartsProcessor implements Traceable {
                         voStore.update(newVO, "inherited")
                     } else if (voNames.containsKey(newVO.name)) {
                         val issue = Issue.at("inheritance-conflict", "Variable " + newVO.name + " is declared again along the inheritance hierarchy.",
-                            "An inheriting SCChart sees every variable of its base charts; a second declaration with the same name is ambiguous. " +
-                            "Rename one of them, or drop the redeclaration and use the inherited variable.", baseVO, newVO)
+                            "Rename one, or use the inherited variable.", baseVO, newVO)
                         environment.errors.add(null, issue.message, baseVO, issue)
                     } else {
                         replacements.put(baseVO, newVO)
@@ -185,7 +184,6 @@ class Inheritance extends SCChartsProcessor implements Traceable {
             for (conflict : regionNames.keySet.filter[regionNames.get(it).size > 1]) {
                 for (r : regionNames.get(conflict)) {
                     val issue = Issue.at("inheritance-conflict", "Region " + r.name + " exists more than once along the inheritance hierarchy.",
-                        "Regions of base charts are merged into the inheriting chart by name, so two regions with the same name would collide. " +
                         "Rename one of the regions.", r)
                     environment.errors.add(null, issue.message, r, issue)
                 }

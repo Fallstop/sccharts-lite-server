@@ -381,16 +381,13 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
                                     region = regionsUsingClock.head
                                     if (regionsUsingClock.size > 1) {
                                         reportSharedClock(state, clock, "Clock " + clock.name + " is read by several concurrent regions of " + state.name + ".",
-                                            "Timed automata are expanded per region, so every region that tests a clock in its transitions needs " +
-                                            "its own clock: declare one clock per region and reset each on entry. The @" + USE_SD_NAME +
-                                            " annotation enables an experimental scheduling-directive expansion for shared clocks.")
+                                            "Declare one clock per region and reset each on entry.")
                                     }
                                 }
                                 
                                 if (region === null) {
                                     reportSharedClock(state, clock, "Clock " + clock.name + " is used across concurrent or nested regions of " + state.name + ".",
-                                        "A clock must be read by transitions of exactly one region. Declare a separate clock for each region " +
-                                        "that needs one, or use the @" + USE_SD_NAME + " annotation for the experimental scheduling-directive expansion.")
+                                        "Declare a separate clock for each region.")
                                 } else {
                                     for (subState : region.states.filter[!it.connector].toList) {
                                         // error case
@@ -398,8 +395,7 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
                                             if (subState.actions.exists[trigger?.eAllContents?.filter(ValuedObjectReference)?.exists[valuedObject == clock]] ||
                                                 subState.controlflowRegions.exists[eAllContents?.filter(ValuedObjectReference)?.exists[valuedObject == clock]]) {
                                                     reportSharedClock(subState, clock, "Clock " + clock.name + " is read both by " + subState.name + " and inside it.",
-                                                        "A clock tested by the transitions of a state cannot also be tested inside that state. Give the inner " +
-                                                        "regions their own clock, or use the @" + USE_SD_NAME + " annotation for the experimental scheduling-directive expansion.")
+                                                        "Give the inner regions their own clock.")
                                             }
                                         }
                                         

@@ -52,7 +52,7 @@ public final class Scheduling {
             List<Dependency> witness = analysis.witness(component);
             if (witness.isEmpty()) continue;
             Issue issue = new Issue(CODE, "Circular dependency prevents scheduling this tick.");
-            issue.hint = "Give shared state one owner, separate request and acknowledgement, or deliberately read the previous tick's value. These choices change timing; review the intended behaviour.";
+            issue.hint = "Give the shared state one owner, or read the previous tick's value with pre().";
             for (Dependency dependency : witness) {
                 Node from = (Node) dependency.eContainer(), to = (Node) dependency.getTarget();
                 Issue.Edge edge = new Issue.Edge();
@@ -66,7 +66,7 @@ public final class Scheduling {
                 for (Issue.Location location : edge.locations) SourceTrace.add(issue.locations, location);
                 issue.cycle.add(edge);
             }
-            issue.details = component.size() + " generated operations are in this dependency cycle. Other unscheduled operations may be consequences of this conflict.";
+            issue.details = component.size() + " generated operations form this dependency cycle; other unscheduled operations may follow from it.";
             List<String> symbols = Issue.assignedSymbols(issue.locations);
             if (!symbols.isEmpty()) issue.message = "Circular dependency involving " + String.join(", ", symbols) + " prevents scheduling this tick.";
             issues.add(issue);

@@ -35,7 +35,7 @@ public final class NativeDiagnostics {
             issue.locations.addAll(GeneratedTrace.get(processor.getCompilationContext(), location.generatedLine));
             issue.locations.add(location);
             issue.details = "Command: " + String.join(" ", command) + "\nWorking directory: " + directory + "\n\n" + log;
-            if (issue.message.contains("array type") && (issue.message.contains("not assignable") || issue.message.contains("assignment to expression"))) issue.hint = "C arrays cannot be assigned as a whole. Copy individual elements, or use an appropriate host C copy with the correct size.";
+            if (issue.message.contains("array type") && (issue.message.contains("not assignable") || issue.message.contains("assignment to expression"))) issue.hint = "C arrays cannot be assigned as a whole; copy the elements individually.";
             if (issue.severity.equals("error")) errors++;
             (issue.severity.equals("warning") ? processor.getEnvironment().getWarnings() : processor.getEnvironment().getErrors()).add(null, issue.message, null, issue);
             previous = issue;
@@ -43,7 +43,7 @@ public final class NativeDiagnostics {
         if ((status == null || status != 0) && errors == 0) {
             boolean missing = log.contains("Cannot run program") || log.contains("No such file or directory") || log.contains("CreateProcess error=2");
             Issue issue = new Issue(missing ? "c-toolchain" : "c-build", missing ? "The C compiler could not be started." : "The C build failed" + (status == null ? "." : " (exit " + status + ")."));
-            issue.hint = missing ? "Check that " + command.get(0) + " is installed and available on the language server's PATH." : "Inspect the compiler and linker output below for the first reported failure.";
+            issue.hint = missing ? "Check that " + command.get(0) + " is on the language server's PATH." : "See the compiler output below.";
             issue.details = log;
             processor.getEnvironment().getErrors().add(null, issue.message, null, issue);
         }

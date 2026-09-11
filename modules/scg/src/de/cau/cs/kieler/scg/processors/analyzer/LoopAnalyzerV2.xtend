@@ -123,9 +123,7 @@ class LoopAnalyzerV2 extends InplaceProcessor<SCGraphs> {
             for (fork : loopData.criticalNodes.filter(Fork)) {
                 if (fork.isNonParallel) {
                     val issue = Issue.at("schizophrenic-fork", "A sequential region is re-entered in the tick it is left.",
-                        "The regions here run one after another instead of in parallel, so a region cannot be exited and " +
-                        "entered again within one tick. Make the transition that re-enters the enclosing state delayed, " +
-                        "or let the regions run in parallel.", fork)
+                        "Make the re-entering transition delayed, or run the regions in parallel.", fork)
                     environment.errors.add(null, issue.message, fork, issue)
                 }
             }

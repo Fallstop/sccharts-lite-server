@@ -183,15 +183,17 @@ class CursorSyncLanguageServerExtension implements ILanguageServerExtension, Cur
         val List<EObject> selection = new ArrayList
         if (mappedInnermost !== null) selection.addAll(viewContext.getTargetElements(mappedInnermost))
         val updater = diagramLanguageServer.diagramUpdater
+        // The selection came from the editor, so it must not be revealed there again: sprotty would otherwise
+        // answer every cursor move with diagram/openInTextEditor and pull the cursor onto the element's name.
         if (result.expanded > 0 || result.collapsed > 0) {
             if (updater instanceof KGraphDiagramUpdater) {
                 // The relayout regenerates the SGraph (and its id map); select once that has been sent.
                 updater.updateLayout(server).thenCompose[it].thenRun [
-                    if (!selection.empty) server.selectElements(selection)
+                    if (!selection.empty) server.selectElements(selection, false)
                 ]
             }
         } else if (!selection.empty) {
-            server.selectElements(selection)
+            server.selectElements(selection, false)
         }
         result.ok = true
         return result

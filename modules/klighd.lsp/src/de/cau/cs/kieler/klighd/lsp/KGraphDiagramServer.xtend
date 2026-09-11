@@ -413,11 +413,27 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
     }
     
     /**
-     * Selects the SGraph elements mapped by the given selectable KGraph elements.
+     * Selects the SGraph elements mapped by the given selectable KGraph elements and, if the client asked for it,
+     * reveals the selection's source text in the editor.
      * 
      * @param toBeSelected The elements that will be selected in the diagram, if they are selectable. 
      */
     def void selectElements(List<EObject> toBeSelected) {
+        selectElements(toBeSelected, true)
+    }
+    
+    /**
+     * Selects the SGraph elements mapped by the given selectable KGraph elements.
+     * 
+     * Sprotty fires the diagram selection listener for a dispatched selection just as for one the user clicked, so a
+     * selection that originates in the editor (the cursor sync) must not reveal its text again: that would move the
+     * editor cursor away from where the user put it.
+     * 
+     * @param toBeSelected The elements that will be selected in the diagram, if they are selectable. 
+     * @param revealInEditor Whether the selection may open its source text in the editor (subject to the client's
+     *   {@code diagram.shouldSelectText} preference).
+     */
+    def void selectElements(List<EObject> toBeSelected, boolean revealInEditor) {
         val toBeSelectedSModelElementIDs = newArrayList
         
         synchronized(diagramState) {
@@ -437,6 +453,7 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
         
         val selectAction = new SelectAction
         selectAction.selectedElementsIDs = toBeSelectedSModelElementIDs
+        selectAction.preventOpenSelection = !revealInEditor
         dispatch(selectAction)
     }
     

@@ -60,14 +60,9 @@ public final class Loops {
             : "Potential instantaneous loop through the timed transitions on " + timed.clockList() + ".");
         issue.severity = severity;
         issue.hint = timed == null
-            ? "Control flow or a data dependency returns to one of these operations without passing a tick boundary. "
-                + "Make one transition on the loop delayed instead of immediate, or read the previous tick's value with pre(). "
-                + "When the model still schedules, the loop only spans a clock or variable that is reset and read in the same tick and this is advisory."
-            : "The compiler tests each timeout in the tick its state is entered, so the loop analyzer sees a path through all of these "
-                + "states that never waits for the next tick. This is advisory when every state on the loop resets " + timed.clockList()
-                + " on entry (entry do " + timed.sourceName(timed.clocks.iterator().next()) + " = 0) and no timeout is 0: a clock that was just reset cannot reach "
-                + "its timeout in the same tick. A state that does not reset the clock lets an already expired timeout carry the machine "
-                + "through several states in one tick; reset the clock there or guard the transition with pre().";
+            ? "Make one transition on the loop delayed, or read the previous tick's value with pre()."
+            : "Advisory while every state on the loop resets " + timed.clockList() + " on entry and no timeout is 0. "
+                + "Otherwise reset the clock there, or make one transition delayed.";
         List<Issue.Location> locations = new ArrayList<>();
         for (Node node : loop) {
             for (Issue.Location location : ScgTrace.locations(node)) {
