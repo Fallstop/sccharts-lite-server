@@ -307,6 +307,17 @@ class SCTXHoverProvider {
         '''Declared in «path.map["`" + it + "`"].join(" › ")»'''
     }
 
+    /**
+     * The element's own documentation comments, without the card's separator. Content assist shows this on
+     * its own, as the whole card would be far too much for a proposal list.
+     */
+    def String documentation(EObject element) {
+        val vo = element instanceof ValuedObject ? element as ValuedObject : null
+        val annotated = (vo === null ? element : element.eContainer) as EObject
+        val text = doc(annotated instanceof Annotatable ? annotated as Annotatable : null, vo)
+        if (text.nullOrEmpty) null else text.replaceFirst("^---\\n\\n", "")
+    }
+
     /** Documentation from semantic comments and from plain comments immediately before the element. */
     private def String doc(Annotatable annotated, ValuedObject vo) {
         val texts = newArrayList

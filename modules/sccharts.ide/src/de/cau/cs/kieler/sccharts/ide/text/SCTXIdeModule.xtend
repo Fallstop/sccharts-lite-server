@@ -3,10 +3,14 @@
  */
 package de.cau.cs.kieler.sccharts.ide.text
 
+import de.cau.cs.kieler.sccharts.ide.text.contentassist.SCTXContentAssistService
+import de.cau.cs.kieler.sccharts.ide.text.contentassist.SCTXProposalProvider
 import de.cau.cs.kieler.sccharts.ide.text.hover.SCTXHoverService
 import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolDetailsProvider
 import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolKindProvider
 import de.cau.cs.kieler.sccharts.ide.text.symbols.SCTXSymbolNameProvider
+import org.eclipse.xtext.ide.editor.contentassist.IdeContentProposalProvider
+import org.eclipse.xtext.ide.server.contentassist.ContentAssistService
 import org.eclipse.xtext.ide.server.hover.IHoverService
 import org.eclipse.xtext.ide.server.symbol.DocumentSymbolMapper.DocumentSymbolDetailsProvider
 import org.eclipse.xtext.ide.server.symbol.DocumentSymbolMapper.DocumentSymbolKindProvider
@@ -20,6 +24,16 @@ class SCTXIdeModule extends AbstractSCTXIdeModule {
     /** Hover cards built from the model (declaration, scope, transitions, comments), not only doc comments. */
     def Class<? extends IHoverService> bindIHoverService() {
         SCTXHoverService
+    }
+
+    /** Completion: documented keywords, snippets and the variables, states and regions in scope. */
+    def Class<? extends IdeContentProposalProvider> bindIdeContentProposalProvider() {
+        SCTXProposalProvider
+    }
+
+    /** Sends the proposal documentation as Markdown instead of as a plain string. */
+    def Class<? extends ContentAssistService> bindContentAssistService() {
+        SCTXContentAssistService
     }
 
     /** Outline: simple names, element kinds and declaration details. */
