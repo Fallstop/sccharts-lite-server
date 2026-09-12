@@ -64,18 +64,18 @@ class SCTXHoverProvider {
     // ------------------------------------------------------------------------------------------------
     // Variables, signals, inputs and outputs
 
+    /**
+     * The declaration as written says kind, type, name and initial value already; the card adds only what
+     * the source line does not show: the documentation, where a nested declaration lives, and how it is used.
+     */
     private def String card(ValuedObject vo) {
         val declaration = vo.eContainer
         val lines = newArrayList
         lines += code(declaration ?: vo, 3)
-        val variable = declaration instanceof VariableDeclaration ? declaration as VariableDeclaration : null
-        val kind = variable === null ? "variable" : variable.kind
-        lines += '''**«kind»** `«vo.name»`«IF variable !== null» of type `«variable.typeName»`«ENDIF»«vo.cardinalities.empty ? "" : " (array" + vo.cardinalities.map["[" + it.serializeHR + "]"].join + ")"»'''
-        if (vo.initialValue !== null) lines += '''Initial value: `«vo.initialValue.serializeHR»`'''
-        if (vo.combineOperator !== null && vo.combineOperator.literal != "NONE") lines += '''Combine operator: `«vo.combineOperator.literal»`'''
-        lines += scopeLine(declaration ?: vo)
-        lines += vo.usage
         lines += doc(declaration as Annotatable, vo)
+        if (vo.combineOperator !== null && vo.combineOperator.literal != "NONE") lines += '''Combine operator: `«vo.combineOperator.literal»`'''
+        lines += nestedScopeLine(declaration ?: vo)
+        lines += vo.usage
         return lines.filterNull.join("\n\n")
     }
 
@@ -120,7 +120,13 @@ class SCTXHoverProvider {
             }
         }
         if (reads + writes == 0) return "Not used anywhere in this chart."
-        return '''Used «reads + writes» time«(reads + writes) == 1 ? "" : "s"»: «writes» write«writes == 1 ? "" : "s"», «reads» read«reads == 1 ? "" : "s"».'''
+        if (reads == 0) return '''Written «times(writes)», never read.'''
+        if (writes == 0) return '''Read «times(reads)», never written.'''
+        '''Written «times(writes)», read «times(reads)».'''
+    }
+
+    private static def String times(int n) {
+        if (n == 1) "once" else '''«n» times'''
     }
 
     // ------------------------------------------------------------------------------------------------
@@ -272,6 +278,17 @@ class SCTXHoverProvider {
 «shown.join("\n")»«IF lines.size > maxLines»
 …«ENDIF»
 ```'''
+    }
+
+    /** The enclosing states and regions, but only for a declaration inside a nested state; the root is implied. */
+    private def String nestedScopeLine(EObject element) {
+        var container = element.eContainer
+        var depth = 0
+        while (container !== null) {
+            if (container instanceof State || container instanceof Region || container instanceof Scope) depth++
+            container = container.eContainer
+        }
+        if (depth <= 1) null else scopeLine(element)
     }
 
     /** The chain of states and regions enclosing the element. */
