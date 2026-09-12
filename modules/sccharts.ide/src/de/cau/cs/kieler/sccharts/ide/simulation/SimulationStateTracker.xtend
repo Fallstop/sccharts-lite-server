@@ -160,7 +160,8 @@ class SimulationStateTracker {
             }
             // The initial states are entered when the simulation starts, which is before the first tick.
         }
-        val before = newLinkedHashSet(currentStates)
+        // newLinkedHashSet(...) is varargs and would hold the list itself, marking every active state as entered.
+        val Set<State> before = new java.util.LinkedHashSet<State>(currentStates)
         currentStates = calculateNewCurrentStates(currentStates, traversedTransitions)
         for (state : currentStates) {
             if (!before.contains(state)) {
