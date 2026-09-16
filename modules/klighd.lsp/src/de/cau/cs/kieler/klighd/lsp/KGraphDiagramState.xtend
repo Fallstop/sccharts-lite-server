@@ -151,7 +151,25 @@ class KGraphDiagramState {
         return null
     }
 
-    private static def String normalizedUri(String uri) {
+    /**
+     * Drops a URI-keyed entry under either spelling, for the same reason {@link #lookup} reads under both:
+     * the map is keyed by the client's spelling, and a caller that decoded it means the same file.
+     */
+    private static def <V> void removeByUri(Map<String, V> map, String uri) {
+        if (uri === null || map.remove(uri) !== null) {
+            return
+        }
+        val wanted = uri.normalizedUri
+        val keys = map.keySet.iterator
+        while (keys.hasNext) {
+            if (wanted.equals(keys.next.normalizedUri)) {
+                keys.remove
+                return
+            }
+        }
+    }
+
+    static def String normalizedUri(String uri) {
         var String decoded
         try {
             decoded = java.net.URLDecoder.decode(uri, "UTF-8")
@@ -403,7 +421,7 @@ class KGraphDiagramState {
     def remove(String clientId) {
         val uri = uriStringMap.get(clientId)
         if (uri !== null) {
-            kGraphContexts.remove(URLDecoder.decode(uri, "UTF-8"))
+            kGraphContexts.removeByUri(uri)
             kGraphToSModelElementMap.remove(uri)
             idToKGraphElementMap.remove(uri)
             snapshotModelMapping.remove(uri)

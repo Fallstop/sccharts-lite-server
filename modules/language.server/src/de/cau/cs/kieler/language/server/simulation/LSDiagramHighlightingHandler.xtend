@@ -79,7 +79,13 @@ class LSDiagramHighlightingHandler extends AbstractDiagramHighlightingHandler im
         } finally {
             if (!suppressLayoutUpdates && (e.operation == SimulationOperation.START || e.operation == SimulationOperation.STOP ||
                 e.operation == SimulationOperation.STEP)) {
-                kgraphExt.updateLayout(simulationExt.currentlySimulatedModel)
+                try {
+                    kgraphExt.updateLayout(simulationExt.currentlySimulatedModel)
+                } catch (Exception ex) {
+                    // The diagram only visualises the run: a refresh that fails must not take down the
+                    // start, step or stop that triggered it.
+                    ex.printStackTrace
+                }
             }
         }
     }

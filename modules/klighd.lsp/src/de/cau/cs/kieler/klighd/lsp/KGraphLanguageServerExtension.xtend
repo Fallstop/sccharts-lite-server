@@ -560,12 +560,39 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
      */
     def void updateLayout(String uri) {
         if (diagramUpdater instanceof KGraphDiagramUpdater) {
-            (diagramUpdater as KGraphDiagramUpdater).updateLayout(
-                diagramServerManager.findDiagramServersByUri(
-                        URLDecoder.decode(uri, "UTF-8")
-                    )?.head as KGraphDiagramServer
-                )
+            val diagramServer = findDiagramServerForUri(uri)
+            // No diagram shows this model, so there is nothing to lay out. An empty result used to
+            // become a null server and the NPE failed whatever asked for the refresh - a simulation
+            // start or step, which has no business failing over a diagram that is not open.
+            if (diagramServer !== null) {
+                (diagramUpdater as KGraphDiagramUpdater).updateLayout(diagramServer)
+            }
         }
+    }
+
+    /**
+     * The diagram server showing the model, under either spelling of its URI. The servers are keyed by
+     * the client's spelling, which percent-encodes a path with spaces, while callers such as the
+     * simulation carry the decoded one; KGraphDiagramState reads its maps under both for the same reason.
+     */
+    private def KGraphDiagramServer findDiagramServerForUri(String uri) {
+        if (uri === null) {
+            return null
+        }
+        var String decoded
+        try {
+            decoded = URLDecoder.decode(uri, "UTF-8")
+        } catch (Exception e) {
+            decoded = uri
+        }
+        val direct = diagramServerManager.findDiagramServersByUri(decoded)?.filter(KGraphDiagramServer)?.head
+        if (direct !== null) {
+            return direct
+        }
+        val wanted = KGraphDiagramState.normalizedUri(uri)
+        return diagramServerManager.diagramServers.filter(KGraphDiagramServer).findFirst [
+            wanted.equals(KGraphDiagramState.normalizedUri(sourceUri))
+        ]
     }
     
     /**
