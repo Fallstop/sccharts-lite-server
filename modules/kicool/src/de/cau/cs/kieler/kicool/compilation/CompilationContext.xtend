@@ -34,6 +34,8 @@ import de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration
 import java.util.List
 import java.util.Map
 import java.util.Observable
+import java.util.function.Function
+import java.util.function.Supplier
 import org.eclipse.emf.ecore.EObject
 import org.eclipse.xtend.lib.annotations.Accessors
 
@@ -82,6 +84,12 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
     /** Stops compilation if any error occurs */
     /** Code generated after a failed processor is incomplete and must never be deployed, so compilation stops. */
     @Accessors boolean stopOnError = true
+    /**
+     * Runs the reads of the original model that start a compilation: provenance, the working copy and the
+     * name cache. A host whose original model is shared with other threads, such as the language server's
+     * open documents, sets it to read under that model's lock; copying resolves proxies, which writes.
+     */
+    @Accessors Function<Supplier<Object>, Object> originalModelReader = [ read | read.get ]
     
     var Processor<?,?> actualProcessor = null
     
@@ -113,21 +121,8 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
         // Diagnostics: remember where the original model's objects come from and start a fresh
         // generated-code trace for this compilation.
         GeneratedTrace.begin(this)
-        SourceTrace.begin(originalModel)
         startEnvironment.addTracingProperty
-        
-        val modelCopy = if (originalModel instanceof EObject) {
-            TracingIntegration.copy(originalModel, startEnvironment)
-        } else if (originalModel instanceof IKiCoolCloneable) {
-            originalModel.cloneObject
-        } else {
-            originalModel
-        }
-        startEnvironment.setProperty(MODEL, modelCopy)
-        
-        if (startEnvironment.getProperty(UNIQUE_NAME_CACHE_ENABLED)) {
-            originalModel.populateNameCache(startEnvironment.getProperty(UNIQUE_NAME_CACHE))
-        }
+        startEnvironment.setProperty(MODEL, originalModelReader.apply[ readOriginalModel ])
         
         for(intermediateProcessor : getIntermediateProcessors(startEnvironment)) {
             intermediateProcessor.setEnvironment(startEnvironment, startEnvironment)
@@ -141,6 +136,22 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
         
         result = startEnvironment.compile
         result        
+    }
+    
+    /** Records the original model's provenance and name cache and returns the working copy. */
+    private def Object readOriginalModel() {
+        SourceTrace.begin(originalModel)
+        val modelCopy = if (originalModel instanceof EObject) {
+            TracingIntegration.copy(originalModel, startEnvironment)
+        } else if (originalModel instanceof IKiCoolCloneable) {
+            originalModel.cloneObject
+        } else {
+            originalModel
+        }
+        if (startEnvironment.getProperty(UNIQUE_NAME_CACHE_ENABLED)) {
+            originalModel.populateNameCache(startEnvironment.getProperty(UNIQUE_NAME_CACHE))
+        }
+        modelCopy
     }
     
     /** Takes the first processor entry and proceeds the compilation with the given environment. */

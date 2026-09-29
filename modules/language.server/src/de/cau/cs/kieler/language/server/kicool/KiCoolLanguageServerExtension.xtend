@@ -43,7 +43,10 @@ import java.util.HashMap
 import java.util.List
 import java.util.Map
 import java.util.Observer
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
+import java.util.function.Supplier
 import org.apache.log4j.Logger
 import org.eclipse.emf.common.util.URI
 import org.eclipse.lsp4j.jsonrpc.validation.NonNull
@@ -188,8 +191,9 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
                 return
             }
             
-            this.currentContext = createContextAndStartCompilationThread(model, param.command, param.inplace, this.currentContext,
-                decodedUri, param.clientId, param.showResultingModel)
+            val Supplier<Object> currentModel = if (param.snapshot) null else [ getModelFromUri(decodedUri) ]
+            this.currentContext = createContextAndStartCompilationThread(model, currentModel, param.command,
+                param.inplace, this.currentContext, decodedUri, param.clientId, param.showResultingModel)
         } catch( Exception e) {
             e.printStackTrace()
             sendError(e.toString())
@@ -231,6 +235,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
      * Starts the compilation thread with the context created by the given model, the compilation system id.
      * 
      * @param model The model to compile
+     * @param currentModel Looks the model up again when the compilation reads it, or null to keep {@code model}
      * @param systemId id of compilation system
      * @param inplace whether inplace compilation should be enabled or disabled
      * @param precedingContext The preceding compilation context
@@ -239,20 +244,45 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
      * @param showResultingModel Whether the final snapshot should be displayed in the diagram
      * @return compilation context that was used to create the newly started compilation thread.
      */
-    private def CompilationContext createContextAndStartCompilationThread(Object model, String systemId,
-        boolean inplace, CompilationContext precedingContext, String uri, String clientId,
-        boolean showResultingModel
+    private def CompilationContext createContextAndStartCompilationThread(Object model,
+        Supplier<Object> currentModel, String systemId, boolean inplace, CompilationContext precedingContext,
+        String uri, String clientId, boolean showResultingModel
     ) {
         val context = Compile.createCompilationContext(systemId, model)
         context.startEnvironment.setProperty(Environment.INPLACE, inplace)
         context.startEnvironment.setProperty(Environment.PRECEEDING_COMPILATION_CONTEXT, precedingContext)
         context.startEnvironment.setProperty(ProjectInfrastructure.USE_TEMPORARY_PROJECT, false)
+        // Edits reparse the open document on another thread and can replace the model this request saw, so the
+        // compilation looks it up again and copies it under the read lock.
+        context.originalModelReader = [ read |
+            readLocked [
+                val current = currentModel?.get
+                if (current !== null) context.originalModel = current
+                read.get
+            ]
+        ]
         compilationObservers.forEach[observer | context.addObserver(observer)]
         context.addObserver(new KeithCompilationUpdater(this, context, uri, clientId, systemId, inplace,
             showResultingModel))
         this.compilationThread = new CompilationThread(context)
         this.compilationThread.start()
         return context
+    }
+
+    /**
+     * Runs a read of an open document's model as an Xtext read request. An edit cancels a read that has not
+     * started yet, so the read is queued again behind it.
+     */
+    private def Object readLocked(Supplier<Object> read) {
+        for (var attempt = 1; ; attempt++) {
+            try {
+                return requestManager.runRead[ read.get ].get
+            } catch (CancellationException e) {
+                if (attempt >= 10) throw e
+            } catch (ExecutionException e) {
+                throw e.cause
+            }
+        }
     }
 
     /**
