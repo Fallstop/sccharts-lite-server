@@ -53,6 +53,7 @@ class KExpressionsOverloadingConverter {
      */
     def void fixOverloadedMethodCalls(IParseResult parseResult) {
         val model = parseResult.rootASTElement
+        if (model === null) return
         val methodCalls = newHashMap
         // Find all
         for (call : model.eAllContents.filter(ReferenceCall).toIterable) {

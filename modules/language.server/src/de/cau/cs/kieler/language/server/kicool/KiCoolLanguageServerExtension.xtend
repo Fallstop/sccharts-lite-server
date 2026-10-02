@@ -178,7 +178,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
             if (param.snapshot) {
                 // Abort if no diagram can be found.
                 if (diagramState === null || diagramState.getKGraphContext(decodedUri) === null) {
-                    client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000, null))
+                    client.didCompile(new DidCompileParam(SourceValidation.failed(decodedUri, new IllegalArgumentException("No diagram snapshot is available."), null), decodedUri, true, 0, 0, null))
                     return
                 }
                 model = diagramState.getKGraphContext(decodedUri).inputModel
@@ -186,17 +186,13 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
                 model = getModelFromUri(decodedUri)
             }
             // Abort if no model to compile could be found.
-            if (model === null) {
-                client.didCompile(new DidCompileParam(null, decodedUri, true, 0, 1000, null))
-                return
-            }
+            if (model === null) SourceValidation.requireValid(model, decodedUri)
             
             val Supplier<Object> currentModel = if (param.snapshot) null else [ getModelFromUri(decodedUri) ]
             this.currentContext = createContextAndStartCompilationThread(model, currentModel, param.command,
                 param.inplace, this.currentContext, decodedUri, param.clientId, param.showResultingModel)
         } catch( Exception e) {
-            e.printStackTrace()
-            sendError(e.toString())
+            client.didCompile(new DidCompileParam(SourceValidation.failed(decodedUri, e, null), decodedUri, true, 0, 0, null))
         }
         return
     }
@@ -248,6 +244,7 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
         Supplier<Object> currentModel, String systemId, boolean inplace, CompilationContext precedingContext,
         String uri, String clientId, boolean showResultingModel
     ) {
+        SourceValidation.requireSystem(systemId, uri)
         val context = Compile.createCompilationContext(systemId, model)
         context.startEnvironment.setProperty(Environment.INPLACE, inplace)
         context.startEnvironment.setProperty(Environment.PRECEEDING_COMPILATION_CONTEXT, precedingContext)
@@ -256,15 +253,23 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
         // compilation looks it up again and copies it under the read lock.
         context.originalModelReader = [ read |
             readLocked [
-                val current = currentModel?.get
-                if (current !== null) context.originalModel = current
+                if (currentModel !== null) {
+                    val current = currentModel.get
+                    SourceValidation.requireValid(current, uri)
+                    context.originalModel = current
+                } else {
+                    SourceValidation.requireValid(context.originalModel, uri)
+                }
                 read.get
             ]
         ]
         compilationObservers.forEach[observer | context.addObserver(observer)]
         context.addObserver(new KeithCompilationUpdater(this, context, uri, clientId, systemId, inplace,
             showResultingModel))
-        this.compilationThread = new CompilationThread(context)
+        this.compilationThread = new CompilationThread(context, [ failure |
+            client.didCompile(new DidCompileParam(SourceValidation.failed(uri, failure, context.originalModel), uri, true, 0, 0, null))
+            if (Boolean.TRUE.equals(context.startEnvironment.getProperty(Environment.CANCEL_COMPILATION))) client.cancelCompilation(true)
+        ])
         this.compilationThread.start()
         return context
     }
@@ -276,7 +281,8 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
     private def Object readLocked(Supplier<Object> read) {
         for (var attempt = 1; ; attempt++) {
             try {
-                return requestManager.runRead[ read.get ].get
+                val result = requestManager.runRead[ SourceValidation.capture(read) ].get
+                return result.value
             } catch (CancellationException e) {
                 if (attempt >= 10) throw e
             } catch (ExecutionException e) {
@@ -445,16 +451,19 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
      */
     override cancelCompilation() {
         try {
-            if (compilationThread.alive) {
+            if (compilationThread !== null && compilationThread.alive) {
                 this.compilationThread.terminated = true
                 var context = this.compilationThread.context
                 context.startEnvironment.setProperty(Environment.CANCEL_COMPILATION, true)
                 for (iResult : context.processorInstancesSequence) {
                     iResult.cancelCompilation()
                 }
+            } else {
+                client.cancelCompilation(false)
             }
         } catch (Exception e) {
             e.printStackTrace
+            client.cancelCompilation(false)
             sendError("An error occurred during compilation cancel. " + e)
         }
         return
@@ -496,18 +505,19 @@ class KiCoolLanguageServerExtension implements ILanguageServerExtension, KiCoolC
     ) {
         try {
             val sameCompilation = command.equals(lastCommand) && uri.equals(lastUri) && inplace === lastInplace
+            val cancelled = Boolean.TRUE.equals(context.startEnvironment.getProperty(Environment.CANCEL_COMPILATION))
             var future = new CompletableFuture()
             future.complete(void)
             future.thenAccept [
                 val results = new CompilationResults(this.snapshotMap.get(uri), this.objectMap.get(uri), finished, uri)
-                timeline?.applyTo(results, finished, finished && compilationThread !== null && compilationThread.terminated)
+                timeline?.applyTo(results, finished, finished && cancelled)
                 client.didCompile(new DidCompileParam(results, uri, finished, currentIndex, maxIndex, currentProcessor))
             ].exceptionally [ throwable |
                 LOG.error('Error while sending compilation results.', throwable)
                 sendError('Error while sending compilation results.' + throwable)
                 return null
             ]
-            if (finished && compilationThread.terminated) {
+            if (finished && cancelled) {
                 future.thenAccept [
                     client.cancelCompilation(true)
                 ].exceptionally [ throwable |

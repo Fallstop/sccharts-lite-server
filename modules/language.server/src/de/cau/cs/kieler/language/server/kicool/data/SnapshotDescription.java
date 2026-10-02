@@ -47,8 +47,11 @@ public class SnapshotDescription {
             Object payload = message.getPayload();
             if (payload instanceof Issue) diagnostics.add((Issue) payload);
             else if (payload != Issue.SUPPRESSED && !severity.equals("info")) {
-                Issue issue = new Issue("compiler", String.valueOf(message.getMessage()));
-                issue.severity = severity; issue.details = raw;
+                Issue issue = message.getException() != null
+                    ? de.cau.cs.kieler.language.server.kicool.SourceValidation.internalFailure("this processor", message.getException(), message.getObject(), null)
+                    : new Issue("compiler", String.valueOf(message.getMessage()));
+                issue.severity = severity;
+                if (issue.details == null) issue.details = raw;
                 if (message.getObject() instanceof EObject) {
                     for (Issue.Location location : SourceTrace.locations((EObject) message.getObject())) SourceTrace.add(issue.locations, location);
                 }
@@ -63,15 +66,33 @@ public class SnapshotDescription {
         for (de.cau.cs.kieler.kicool.compilation.Processor<?, ?> processor : context.getProcessorInstancesSequence()) {
             de.cau.cs.kieler.kicool.environments.Environment environment = processor.getEnvironment();
             if (environment == null) continue;
+            int start = issues.size();
             collect(environment.getErrors(), "error", null, issues);
             collect(environment.getWarnings(), "warning", null, issues);
             collect(environment.getInfos(), "info", null, issues);
+            for (Issue issue : issues.subList(start, issues.size())) {
+                if (!"internal-compiler-error".equals(issue.code)) continue;
+                issue.message = "The compiler failed during " + processor.getName() + ".";
+                if (issue.locations.isEmpty() && context.getOriginalModel() instanceof EObject) {
+                    for (Issue.Location location : SourceTrace.locations((EObject) context.getOriginalModel())) SourceTrace.add(issue.locations, location);
+                }
+            }
         }
         return issues;
     }
 
     public String getName() { return name; }
     public void setName(String value) { name = value; }
+    public void locateFailures(Object model, String uri) {
+        for (Issue issue : diagnostics) {
+            if (!"internal-compiler-error".equals(issue.code)) continue;
+            issue.message = "The compiler failed during " + name + ".";
+            if (issue.locations.isEmpty() && model instanceof EObject) {
+                for (Issue.Location location : SourceTrace.locations((EObject) model)) SourceTrace.add(issue.locations, location);
+            }
+            if (issue.locations.isEmpty() && uri != null) issue.locations.add(new Issue.Location(uri, 0, 0, name));
+        }
+    }
     public int getIndex() { return index; }
     public void setIndex(int value) { index = value; }
     public int getSnapshotIndex() { return snapshotIndex; }

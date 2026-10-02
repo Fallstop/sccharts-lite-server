@@ -43,6 +43,7 @@ import de.cau.cs.kieler.kicool.environments.Environment;
 import de.cau.cs.kieler.language.server.ILanguageClientProvider;
 import de.cau.cs.kieler.language.server.KeithLanguageClient;
 import de.cau.cs.kieler.language.server.kicool.data.SnapshotDescription;
+import de.cau.cs.kieler.language.server.kicool.SourceValidation;
 
 /**
  * Analyses open SCCharts documents while they are edited. After Xtext has rebuilt a changed document the
@@ -69,12 +70,14 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
 
     /** Counts the edits seen per document; an analysis only publishes if no edit arrived while it ran. */
     private final Map<String, Long> generations = new HashMap<>();
+    private long sequence;
 
     private volatile boolean enabled = true;
     private volatile long debounceMs = 400;
 
     /** The compilation currently running on the worker, cancelled when superseded. */
     private volatile CompilationContext running;
+    private volatile String runningUri;
 
     private ILanguageServerAccess access;
     private KeithLanguageClient client;
@@ -112,9 +115,9 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
                 List<String> uris;
                 synchronized (pending) {
                     pending.values().forEach(future -> future.cancel(false));
-                    uris = new ArrayList<>(pending.keySet());
+                    uris = new ArrayList<>(generations.keySet());
                     pending.clear();
-                    generations.replaceAll((uri, generation) -> generation + 1);
+                    generations.replaceAll((uri, generation) -> ++sequence);
                 }
                 cancelRunning();
                 for (String uri : uris) clear(uri, "disabled");
@@ -132,11 +135,12 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
         synchronized (pending) {
             ScheduledFuture<?> previous = pending.remove(uri);
             if (previous != null) previous.cancel(false);
-            long generation = generations.merge(uri, 1L, Long::sum);
+            long generation = ++sequence;
+            generations.put(uri, generation);
             pending.put(uri, worker.schedule(() -> run(uri, generation), delay, TimeUnit.MILLISECONDS));
         }
-        // An analysis of an older version of the document is worthless; let it stop between processors.
-        cancelRunning();
+        // Edits in another document should not restart the current analysis.
+        if (uri.equals(runningUri)) cancelRunning();
     }
 
     private void cancelRunning() {
@@ -170,13 +174,20 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
         }
         if (!enabled || !current(uri, generation) || client == null || access == null) return;
         Snapshot snapshot;
+        final Integer[] observedVersion = { null };
         try {
-            snapshot = access.doRead(uri, context -> {
+            snapshot = (Snapshot) access.doRead(uri, context -> SourceValidation.capture(() -> {
                 if (!context.isDocumentOpen()) return new Snapshot(null, null, "closed");
                 Resource resource = context.getResource();
                 Integer version = context.getDocument() == null ? null : context.getDocument().getVersion();
+                observedVersion[0] = version;
                 if (resource == null || !resource.getErrors().isEmpty() || resource.getContents().isEmpty()) {
                     return new Snapshot(version, null, "syntax");
+                }
+                try {
+                    SourceValidation.requireValid(resource);
+                } catch (SourceValidation.InvalidSource error) {
+                    return new Snapshot(version, null, "source");
                 }
                 EObject model = resource.getContents().get(0);
                 // Origins are recorded on the live objects and inherited by the copy, which is what gets compiled
@@ -190,13 +201,18 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
                     // Without a resource factory the copy stays detached; the transformations do not need one.
                 }
                 return new Snapshot(version, copy, null);
-            }).get();
+            })).get().getValue();
         } catch (Exception e) {
+            if (observedVersion[0] != null && current(uri, generation) && !(e instanceof java.util.concurrent.CancellationException)
+                && !(e.getCause() instanceof java.util.concurrent.CancellationException)) {
+                publish(uri, observedVersion[0], List.of(SourceValidation.internalFailure("reading the model", e, null, uri)), 0, "internal");
+            }
             return;
         }
         if (snapshot == null || !current(uri, generation)) return;
         if (snapshot.model == null) {
-            publish(uri, snapshot.version, new ArrayList<>(), 0, snapshot.reason);
+            if ("closed".equals(snapshot.reason)) clear(uri, "closed");
+            else publish(uri, snapshot.version, new ArrayList<>(), 0, snapshot.reason);
             return;
         }
         long start = System.nanoTime();
@@ -208,6 +224,7 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
             context.getStartEnvironment().setProperty(Environment.INPLACE, false);
             context.getStartEnvironment().setProperty(ProjectInfrastructure.USE_TEMPORARY_PROJECT, false);
             context.setStopOnError(true);
+            runningUri = uri;
             running = context;
             if (!current(uri, generation)) return;
             // Never overlap a user compile: it corrupts the SCG extension caches (CompileGate). A user compile
@@ -219,15 +236,17 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
             } finally {
                 CompileGate.unlock();
             }
-            cancelled = Boolean.TRUE.equals(context.getStartEnvironment().getProperty(Environment.CANCEL_COMPILATION));
             for (Issue issue : SnapshotDescription.issues(context)) {
                 if (!issue.locations.isEmpty()) issues.add(issue);
             }
         } catch (Exception e) {
-            // A transformation that throws on a half-written model is not a finding; the next edit retries.
-            return;
+            issues.add(SourceValidation.internalFailure("live analysis", e, snapshot.model, uri));
         } finally {
-            if (running == context) running = null;
+            if (context != null) cancelled = Boolean.TRUE.equals(context.getStartEnvironment().getProperty(Environment.CANCEL_COMPILATION));
+            if (running == context) {
+                running = null;
+                runningUri = null;
+            }
         }
         if (!current(uri, generation)) return;
         if (cancelled) {
@@ -242,7 +261,8 @@ public class LiveDiagnosticsExtension implements ILanguageServerExtension, LiveD
         synchronized (pending) {
             ScheduledFuture<?> previous = pending.remove(uri);
             if (previous != null) previous.cancel(false);
-            generations.merge(uri, 1L, Long::sum);
+            if ("closed".equals(reason)) generations.remove(uri);
+            else generations.put(uri, ++sequence);
         }
         publish(uri, null, new ArrayList<>(), 0, reason);
     }
