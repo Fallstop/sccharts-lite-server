@@ -207,7 +207,7 @@ public class SCTXResource extends LazyLinkingResource {
         val addedImports = imports.difference(currentImports.keySet)
         val removedImports = currentImports.keySet.difference(imports)
 
-        val base = uri.segmentsList.take(uri.segmentCount - 1).join(uri.scheme + ":/", "/", "/", [it])
+        val base = uri.trimSegments(1).appendSegment("").toString
 
         // Update folder imports
         // This might be slow!

@@ -14,6 +14,7 @@ import org.eclipse.xtext.resource.XtextResource;
 import org.eclipse.xtext.validation.CheckMode;
 import org.eclipse.xtext.util.CancelIndicator;
 import de.cau.cs.kieler.core.diagnostics.Issue;
+import de.cau.cs.kieler.core.diagnostics.SourceTrace;
 import de.cau.cs.kieler.language.server.kicool.data.CompilationResults;
 import de.cau.cs.kieler.language.server.kicool.data.SnapshotDescription;
 
@@ -83,7 +84,7 @@ public final class SourceValidation {
             issue.hint = "Fix this source error before compiling again.";
             int offset = problem instanceof Diagnostic ? ((Diagnostic) problem).getOffset() : 0;
             int length = problem instanceof Diagnostic ? ((Diagnostic) problem).getLength() : 0;
-            issue.locations.add(new Issue.Location(uri, offset, length, problem.getMessage()));
+            issue.locations.add(location(source, offset, length, problem.getMessage()));
             errors.add(issue);
         }
         if (!errors.isEmpty()) throw new InvalidSource(errors);
@@ -96,7 +97,7 @@ public final class SourceValidation {
                 && !message.startsWith("Every region must") && !message.startsWith("Connector states must")) continue;
             Issue issue = new Issue("source-validation", message);
             issue.hint = "Fix this source error before compiling again.";
-            issue.locations.add(new Issue.Location(uri, problem.getOffset() == null ? 0 : problem.getOffset(),
+            issue.locations.add(location(source, problem.getOffset() == null ? 0 : problem.getOffset(),
                 problem.getLength() == null ? 0 : problem.getLength(), message));
             errors.add(issue);
         }
@@ -107,8 +108,16 @@ public final class SourceValidation {
     private static InvalidSource invalid(String uri, String message) {
         Issue issue = new Issue("source-validation", message);
         issue.hint = "Start with scchart Name { initial state Idle }.";
-        issue.locations.add(new Issue.Location(uri, 0, 0, message));
+        Issue.Location location = new Issue.Location(uri, 0, 0, message);
+        location.line = 0;
+        location.column = 0;
+        issue.locations.add(location);
         return new InvalidSource(List.of(issue));
+    }
+
+    private static Issue.Location location(XtextResource source, int offset, int length, String label) {
+        Issue.Location location = new Issue.Location(source.getURI().toString(), offset, length, label);
+        return SourceTrace.withPosition(location, source.getParseResult() == null ? null : source.getParseResult().getRootNode());
     }
 
     public static Issue internalFailure(String stage, Throwable failure, Object model, String uri) {
