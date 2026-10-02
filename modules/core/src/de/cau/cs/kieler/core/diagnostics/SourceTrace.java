@@ -76,9 +76,21 @@ public final class SourceTrace {
         int start = node.getOffset() - node.getTotalOffset();
         String label = node.getText().substring(start, start + node.getLength()).trim().replaceAll("\\s+", " ");
         if (label.length() > 180) label = label.substring(0, 177) + "...";
-        Issue.Location location = new Issue.Location(uri, node.getOffset(), node.getLength(), label);
+        Issue.Location location = withPosition(new Issue.Location(uri, node.getOffset(), node.getLength(), label), node);
         for (EObject element = object; element != null; element = element.eContainer()) {
             location.traceUris.add(EcoreUtil.getURI(element).toString());
+        }
+        return location;
+    }
+
+    /** Source columns are UTF-16, matching the offsets used by Xtext and LSP. */
+    public static Issue.Location withPosition(Issue.Location location, INode node) {
+        if (node != null) {
+            INode root = node.getRootNode();
+            int offset = Math.max(root.getTotalOffset(), Math.min(location.offset, root.getTotalEndOffset()));
+            var position = NodeModelUtils.getLineAndColumn(root, offset);
+            location.line = position.getLine() - 1;
+            location.column = position.getColumn() - 1;
         }
         return location;
     }
