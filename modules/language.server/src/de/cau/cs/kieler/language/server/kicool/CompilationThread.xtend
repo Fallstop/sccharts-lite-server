@@ -13,6 +13,7 @@
 package de.cau.cs.kieler.language.server.kicool
 
 import java.lang.Thread
+import java.util.function.Consumer
 import de.cau.cs.kieler.kicool.compilation.CompilationContext
 import de.cau.cs.kieler.kicool.compilation.CompileGate
 import org.eclipse.xtend.lib.annotations.Accessors
@@ -25,10 +26,13 @@ class CompilationThread extends Thread {
     
     @Accessors val CompilationContext context
     
+    val Consumer<Exception> onFailure
+
     public var boolean terminated
     
-    new(CompilationContext context) {
+    new(CompilationContext context, Consumer<Exception> onFailure) {
         this.context = context
+        this.onFailure = onFailure
         terminated = false
     }
     
@@ -39,6 +43,8 @@ class CompilationThread extends Thread {
         CompileGate.lock()
         try {
             context.compile()
+        } catch (Exception failure) {
+            onFailure.accept(failure)
         } finally {
             CompileGate.unlock()
         }

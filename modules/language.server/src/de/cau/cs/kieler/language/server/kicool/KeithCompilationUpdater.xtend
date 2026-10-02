@@ -89,6 +89,7 @@ class KeithCompilationUpdater implements Observer {
                 // Add snapshot
                 val description = new SnapshotDescription(processor.name, currentIndex, currentSnapshotList.length, errors, warnings, infos)
                 description.processorId = processor.id
+                description.locateFailures(context.originalModel, uri)
                 currentSnapshotList.add(description)
                 // Add snapshot to map
                 kicoolExt.objectMap.get(uri).add(notification.snapshot)
@@ -110,6 +111,7 @@ class KeithCompilationUpdater implements Observer {
                 val snapshotIndex = kicoolExt.objectMap.get(uri).size
                 timeline?.finished(processor, snapshotIndex)
                 timeline?.decorate(description, processor)
+                description.locateFailures(context.originalModel, uri)
                 currentSnapshotList.add(description)
                 kicoolExt.objectMap.get(uri).add(impl)
                 currentIndex++
