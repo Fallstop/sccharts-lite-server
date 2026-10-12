@@ -15,6 +15,8 @@ package de.cau.cs.kieler.sccharts.processors
 import com.google.common.collect.Iterables
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
+import de.cau.cs.kieler.core.diagnostics.Issue
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
 import de.cau.cs.kieler.kexpressions.AccessModifier
@@ -73,7 +75,9 @@ import de.cau.cs.kieler.scl.Conditional
 import de.cau.cs.kieler.scl.Loop
 import de.cau.cs.kieler.scl.MethodImplementationDeclaration
 import de.cau.cs.kieler.scl.Return
+import java.util.List
 import java.util.Set
+import org.eclipse.emf.ecore.EObject
 
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.TracingEcoreUtil.*
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.TransformationTracing.*
@@ -125,6 +129,10 @@ class Reference extends SCChartsProcessor implements Traceable {
     
     protected val replacedWithLiterals = <ValuedObject> newHashSet
     protected val processedSCCharts = <State> newHashSet
+    /** Expansions in progress, outermost first: the root state, then the copy made for each reference being expanded. */
+    protected val expansions = <Scope> newArrayList
+    /** The chart (or region) as written in the model that each expanded copy was made from. */
+    protected val copiedFrom = <Scope, Scope> newHashMap
     
     override getId() {
         "de.cau.cs.kieler.sccharts.processors.reference"
@@ -136,6 +144,8 @@ class Reference extends SCChartsProcessor implements Traceable {
     
     override process() {
         replacedWithLiterals.clear
+        expansions.clear
+        copiedFrom.clear
         dataflowProcessor = KiCoolRegistration.getProcessorInstance(Dataflow.ID) as Dataflow
         dataflowProcessor?.setEnvironment(sourceEnvironment, environment)
         inheritanceProcessor = KiCoolRegistration.getProcessorInstance(Inheritance.ID) as Inheritance
@@ -156,9 +166,14 @@ class Reference extends SCChartsProcessor implements Traceable {
             model.rootStates.immutableCopy
         }
         
-        for(rootState : rootStateList) {
-            rootState.expandRoot(null, true)
-            enumProcessor?.consolidateEnumDeclarations(rootState)
+        try {
+            for(rootState : rootStateList) {
+                rootState.expandRoot(null, true)
+                enumProcessor?.consolidateEnumDeclarations(rootState)
+            }
+        } catch (RecursiveReference recursion) {
+            // Reported where the cycle closes. The expansion would never end, so stop here.
+            return
         }
         
         if (environment.getProperty(EXPAND_REFERENCED_STATES)) {
@@ -178,6 +193,8 @@ class Reference extends SCChartsProcessor implements Traceable {
     }
     
     protected def void expandRoot(State rootState, Replacements replacements, boolean validate) {
+        expansions += rootState
+        
         // Handle inheritance
         val statesWithInheritance = rootState.allContainedStates.filter[ !baseStateReferences.nullOrEmpty ].toList
         for (state : statesWithInheritance) {
@@ -239,6 +256,8 @@ class Reference extends SCChartsProcessor implements Traceable {
         if (validate && !rootState.validate) {
             environment.errors.add("References objects are not contained in the resource!")
         }
+        
+        expansions.remove(rootState)
     }
     
     /** Expands one referenced state and keeps track of the replacement stack. */
@@ -249,6 +268,7 @@ class Reference extends SCChartsProcessor implements Traceable {
                 + "! Only States/Regions can be instantiated.", scopeWithReference, true)
             return
         }
+        scopeWithReference.reference.scope.checkNotRecursive(scopeWithReference.reference, scopeWithReference)
         
         // Create the new scope via copy. All internal references are ok. However, you must correct the bindings now.
         val newScope = scopeWithReference.reference.scope.copy.asScope => [ 
@@ -262,6 +282,8 @@ class Reference extends SCChartsProcessor implements Traceable {
                  it.annotations += annotation.copy
             }
         ]
+        copiedFrom.put(newScope, scopeWithReference.reference.scope.expandedFrom)
+        expansions += newScope
         
         if (newScope instanceof State) {
             processedSCCharts += scopeWithReference.reference.scope as State
@@ -352,6 +374,74 @@ class Reference extends SCChartsProcessor implements Traceable {
                 state.expandReferencedScope(new Replacements)
             }
         }
+        
+        expansions.remove(newScope)
+    }
+    
+    /**
+     * Diagnostics: expanding a reference inserts a copy of the referenced chart, and then expands the references
+     * inside that copy. If the chart is already being expanded further out, its copy contains the same chain of
+     * references again, so the expansion never ends (KIELER overflows its stack here). That holds when the reference
+     * names the very root or copy being expanded (a chart naming itself), and when it names a chart being expanded
+     * that has no generic type parameters. Other charts with generic type parameters may expand differently each
+     * time, depending on the types bound to them, and are left alone.
+     * Reports the reference that closes the cycle and abandons the expansion.
+     */
+    protected def void checkNotRecursive(Scope target, EObject reference, EObject fallback) {
+        val chart = target.expandedFrom
+        val namesItself = expansions.exists[it === target]
+        val sameChart = expansions.exists[expandedFrom === chart]
+            && !chart.genericParameterDeclarations.exists[isComplexTypeDeclaration || isPrimitiveTypeDeclaration]
+        if (!namesItself && !sameChart) return
+        var path = reference.expansionPath
+        if (!path.contains(chart)) path = expansions.map[expandedFrom]
+        val cycle = path.drop(path.lastIndexOf(chart)).toList
+        val chain = (cycle + #[chart]).map[chartName].join(" -> ")
+        val user = cycle.last.chartName
+        val message = "Recursive reference: chart " + (if (cycle.size == 1) user + " uses itself"
+            else user + " uses " + chart.chartName + ", which leads back to " + user) + " (" + chain + ")."
+        val hint = "A reference such as `state S is " + chart.chartName + "(...)` or `ref " + chart.chartName + " x` is compiled by "
+            + "inserting a copy of " + chart.chartName + ", so a chart that uses itself, directly or through other charts, would be "
+            + "copied forever. KIELER cannot compile this either: its compiler never finishes. Remove this reference to "
+            + chart.chartName + " and express the repetition with states and transitions instead, e.g. a transition back to an "
+            + "earlier state."
+        // A reference generated from a dataflow equation is located through the nearest traced container.
+        var issue = Issue.at("unsupported-construct", message, hint, reference)
+        for (var located = fallback; issue.locations.empty && located !== null; located = located.eContainer) {
+            issue = Issue.at("unsupported-construct", message, hint, located)
+        }
+        environment.errors.add(null, issue.message, fallback, issue)
+        throw new RecursiveReference
+    }
+    
+    /** The chart (or region) as written in the model that the given scope was expanded from. */
+    protected def Scope expandedFrom(Scope scope) {
+        copiedFrom.get(scope) ?: scope
+    }
+    
+    /**
+     * The charts expanded on the way from the root to the given object, outermost first: the expansions in progress
+     * up to the innermost one containing the object, then the copies already inserted around it.
+     */
+    protected def List<Scope> expansionPath(EObject object) {
+        val path = <Scope> newLinkedList
+        for (var current = object; current !== null; current = current.eContainer) {
+            val index = expansions.indexOf(current)
+            if (index >= 0) {
+                path.addAll(0, expansions.subList(0, index + 1).map[expandedFrom])
+                return path
+            }
+            if (copiedFrom.containsKey(current)) path.addFirst(copiedFrom.get(current))
+        }
+        path
+    }
+    
+    protected def String chartName(Scope scope) {
+        scope.name ?: if (scope instanceof Region) "region" else "scope"
+    }
+    
+    /** Abandons an expansion that would never end, after the reference closing the cycle was reported. */
+    static class RecursiveReference extends RuntimeException {
     }
     
     /** Replace valued object reference inside the given scope. */
@@ -848,10 +938,13 @@ class Reference extends SCChartsProcessor implements Traceable {
                 val dataflowBinding = ref.hasAnnotation(Dataflow.DF_BINDING)
                 var refTarget = ref.reference
                 if (refTarget instanceof State) {
+                    refTarget.checkNotRecursive(ref, ref)
                     processedSCCharts += refTarget
                     val tracedCopy = refTarget.tracedCopyAndReturnCopier
                     val newState = tracedCopy.key
                     val copier = tracedCopy.value
+                    SourceTrace.copied(copier)
+                    copiedFrom.put(newState, refTarget.expandedFrom)
                     
                     // Bindings
                     val spreadBindings = newArrayList
