@@ -15,9 +15,16 @@ package de.cau.cs.kieler.sccharts.processors
 
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.extensions.UniqueNameCache
+import de.cau.cs.kieler.core.diagnostics.Divergence
+import de.cau.cs.kieler.core.diagnostics.Issue
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import de.cau.cs.kieler.kexpressions.Expression
+import de.cau.cs.kieler.kexpressions.FunctionCall
 import de.cau.cs.kieler.kexpressions.OperatorExpression
 import de.cau.cs.kieler.kexpressions.OperatorType
+import de.cau.cs.kieler.kexpressions.Parameter
+import de.cau.cs.kieler.kexpressions.PrintCall
+import de.cau.cs.kieler.kexpressions.ReferenceCall
 import de.cau.cs.kieler.kexpressions.ValueType
 import de.cau.cs.kieler.kexpressions.ValuedObject
 import de.cau.cs.kieler.kexpressions.ValuedObjectReference
@@ -27,11 +34,17 @@ import de.cau.cs.kieler.kexpressions.extensions.KExpressionsValuedObjectExtensio
 import de.cau.cs.kieler.kexpressions.keffects.Assignment
 import de.cau.cs.kieler.kexpressions.keffects.extensions.KEffectsExtensions
 import de.cau.cs.kieler.kicool.kitt.tracing.Traceable
+import de.cau.cs.kieler.sccharts.DuringAction
+import de.cau.cs.kieler.sccharts.EntryAction
+import de.cau.cs.kieler.sccharts.ExitAction
+import de.cau.cs.kieler.sccharts.LocalAction
 import de.cau.cs.kieler.sccharts.SCCharts
 import de.cau.cs.kieler.sccharts.State
+import de.cau.cs.kieler.sccharts.SuspendAction
 import de.cau.cs.kieler.sccharts.Transition
 import de.cau.cs.kieler.sccharts.extensions.SCChartsActionExtensions
 import de.cau.cs.kieler.sccharts.extensions.SCChartsTransformationExtension
+import de.cau.cs.kieler.scl.Return
 import java.util.HashMap
 import java.util.List
 import java.util.Stack
@@ -270,6 +283,15 @@ class Pre extends SCChartsProcessor implements Traceable {
                         isReplaced = true
                     }
                 }
+                LocalAction : {
+                    // Lab: KIELER has no case for this and stops in its default case below. A pre that is the whole
+                    // trigger of a state action is substituted like a transition trigger, with a divergence warning.
+                    if(container.trigger == pre) {
+                        pre.reportActionTriggerDivergence(container, valuedObjectReference)
+                        container.trigger = replacementExpression
+                        isReplaced = true
+                    }
+                }
                 ValuedObjectReference : {
                     if(container.indices.contains(pre)) {
                         container.indices.set(container.indices.indexOf(pre), replacementExpression)
@@ -277,7 +299,9 @@ class Pre extends SCChartsProcessor implements Traceable {
                     }
                 }
                 default: {
-                    environment.errors.add(new Exception("Pre expressions are only supported in assignments, triggers and other pre expressions, but got "+container))
+                    // Lab: the same rejection as KIELER's "Pre expressions are only supported in assignments, triggers
+                    // and other pre expressions", reported as a located error instead of an internal exception
+                    pre.reportUnsupportedPlacement(container, valuedObjectReference)
                     // Don't show the generic error that the expression could not be replaced. It would be redundant
                     isReplaced = true
                 }
@@ -288,6 +312,61 @@ class Pre extends SCChartsProcessor implements Traceable {
         }
     }
     
+    /** Diagnostics: the pre expression as the student wrote it, e.g. "pre(x)". */
+    private def String sourceText(OperatorExpression pre, ValuedObjectReference valuedObjectReference) {
+        SourceTrace.locations(pre).map[label].filterNull.head ?: "pre(" + valuedObjectReference.valuedObject?.name + ")"
+    }
+
+    /** Diagnostics: the lab compiles a pre that is the whole trigger of a state action, KIELER does not. */
+    private def reportActionTriggerDivergence(OperatorExpression pre, LocalAction action, ValuedObjectReference valuedObjectReference) {
+        val text = pre.sourceText(valuedObjectReference)
+        val type = valuedObjectReference.valuedObject?.type
+        val comparison = text + (if (type == ValueType.BOOL || type == ValueType.PURE) " == true" else " != 0")
+        val kind = switch (action) {
+            EntryAction : "an entry action"
+            DuringAction : "a during action"
+            ExitAction : "an exit action"
+            SuspendAction : "a suspend action"
+            default : "a state action"
+        }
+        val issue = Divergence.issue("`" + text + "` used directly as the trigger of " + kind,
+            "fails in its Pre transformation (\"Pre expressions are only supported in assignments, triggers and other pre expressions\")",
+            "To make the chart portable, compare the value explicitly: write `if " + comparison + "` instead of `if " + text
+                + "`. It means the same, and KIELER compiles pre(...) inside a comparison.", pre)
+        environment.warnings.add(null, issue.message, pre, issue)
+    }
+
+    /** Diagnostics: a pre that neither KIELER nor the lab can substitute where it is written. */
+    private def reportUnsupportedPlacement(OperatorExpression pre, EObject container, ValuedObjectReference valuedObjectReference) {
+        val text = pre.sourceText(valuedObjectReference)
+        val unsupported = "The official KIELER compiler cannot compile this either: it only accepts pre(...) in an assignment, "
+            + "a transition trigger, an array index or inside a larger expression. "
+        var EObject declaration = container
+        while (declaration !== null && !(declaration instanceof ValuedObject)) declaration = declaration.eContainer
+        val declared = declaration as ValuedObject
+        val issue = if (container instanceof Parameter) {
+            val call = container.eContainer
+            val callee = switch (call) {
+                PrintCall : "print(...)"
+                FunctionCall : call.functionName + "(...)"
+                ReferenceCall : call.valuedObject?.name + "(...)"
+                default : "the call"
+            }
+            Issue.at("unsupported-construct", "`" + text + "` cannot be passed directly as an argument of " + callee + ".",
+                unsupported + "Store the previous value in a variable first, e.g. `prev = " + text + "`, and pass that variable instead.", pre)
+        } else if (container instanceof Return) {
+            Issue.at("unsupported-construct", "`" + text + "` cannot be used directly in a return statement.",
+                unsupported + "Assign the previous value to a variable first, e.g. `prev = " + text + "`, and return that variable.", pre)
+        } else if (declared !== null) {
+            Issue.at("unsupported-construct", "`" + text + "` cannot be used in the declaration of `" + declared.name + "`.",
+                unsupported + "Give `" + declared.name + "` a plain initial value and assign the previous value to it in an action instead.", pre)
+        } else {
+            Issue.at("unsupported-construct", "`" + text + "` cannot be used here.",
+                unsupported + "Assign the previous value to a variable first, e.g. `prev = " + text + "`, and use that variable here.", pre)
+        }
+        environment.errors.add(null, issue.message, pre, issue)
+    }
+
     private def State getParentState(EObject obj) {
         val parent = obj.eContainer
         if(parent instanceof State) {
