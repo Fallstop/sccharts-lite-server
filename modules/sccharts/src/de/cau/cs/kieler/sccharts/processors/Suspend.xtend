@@ -121,6 +121,11 @@ class Suspend extends SCChartsProcessor implements Traceable {
             suspension.setDefaultTrace
             val suspendTrigger = suspension.trigger;
             val notSuspendTrigger = not(suspendTrigger)
+            if (suspendTrigger === null) {
+                // Lab: without trigger this negation has no operand, on which KIELER's code generators fail.
+                // Tracing it to the suspend lets the code generator report the suspend instead.
+                notSuspendTrigger.trace(suspension)
+            }
             val immediateSuspension = suspension.isImmediate;
 
             // add during action AFTER modifying allInnerActions so that we

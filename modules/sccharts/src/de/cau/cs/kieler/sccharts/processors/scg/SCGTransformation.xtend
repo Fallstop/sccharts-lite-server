@@ -17,6 +17,8 @@ import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
 import de.cau.cs.kieler.annotations.extensions.PragmaExtensions
 import de.cau.cs.kieler.annotations.extensions.UniqueNameCache
+import de.cau.cs.kieler.core.diagnostics.Issue
+import de.cau.cs.kieler.core.diagnostics.UnsupportedConstructException
 import de.cau.cs.kieler.kexpressions.BoolValue
 import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.kexpressions.FloatValue
@@ -151,8 +153,27 @@ class SCGTransformation extends Processor<SCCharts, SCGraphs> implements Traceab
             model.copyPragmas(it)
         ]
         model.createSCGs
-        scGraphs.scgs.addAll(0, model.rootStates.map[transform])
+        try {
+            scGraphs.scgs.addAll(0, model.rootStates.map[transform])
+        } catch (UnsupportedConstructException failure) {
+            if (!reportTriggerlessWeakSuspend(failure)) throw failure
+            return
+        }
         setModel(scGraphs)
+    }
+    
+    /**
+     * Lab: the weak suspend transformation traces the assignment without value it builds for a weak suspend without
+     * trigger to that weak suspend. Reports the weak suspend as an error; false if the assignment is not traced to one.
+     */
+    protected def boolean reportTriggerlessWeakSuspend(UnsupportedConstructException failure) {
+        val issue = Issue.at("unsupported-construct",
+            "This weak suspend has no trigger. KIELER cannot compile a weak suspend without an if condition.",
+            "Add the condition under which the state is suspended, for example weak suspend if pause.",
+            failure.object)
+        if (issue.locations.empty) return false
+        environment.errors.add(null, issue.message, null, issue)
+        return true
     }
     
     def createSCGs(EObject obj) {
@@ -579,6 +600,11 @@ class SCGTransformation extends Processor<SCCharts, SCGraphs> implements Traceab
         
         			// TODO: Test if this works correct? Was before: assignment.setAssignment(serializer.serialize(transitionCopy))
         			if (!effect.isPostfixOperation) {
+        			    if (sCChartAssignment.expression === null) {
+        			        // Lab: KIELER fails here on an assignment without value (the weak suspend transformation builds one
+        			        // for a weak suspend without trigger). Name it, so that process() can report the construct instead.
+        			        throw new UnsupportedConstructException("Unhandled parameter types: [null]", effect)
+        			    }
         			    assignment.setExpression(sCChartAssignment.expression.convertToSCGExpression.trace(transition, effect))
         			}
         			if (!sCChartAssignment.indices.nullOrEmpty) {

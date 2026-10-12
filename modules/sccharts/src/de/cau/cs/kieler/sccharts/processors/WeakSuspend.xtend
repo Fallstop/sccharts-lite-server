@@ -105,7 +105,13 @@ class WeakSuspend extends SCChartsProcessor implements Traceable {
                 weakSuspend.setDefaultTrace
                 val duringAction = state.createDuringAction
                 duringAction.setImmediate(weakSuspend.immediate)
-                duringAction.addEffect(weakSuspendFlag.createAssignment(weakSuspend.trigger.copy))
+                val flagAssignment = weakSuspendFlag.createAssignment(weakSuspend.trigger.copy)
+                if (weakSuspend.trigger === null) {
+                    // Lab: without trigger this assignment has no value, on which KIELER's SCG transformation fails.
+                    // Tracing it to the weak suspend lets the SCG transformation report the weak suspend instead.
+                    flagAssignment.trace(weakSuspend)
+                }
+                duringAction.addEffect(flagAssignment)
                 state.actions.remove(weakSuspend)
             }
 

@@ -1,6 +1,7 @@
 package de.cau.cs.kieler.kexpressions.extensions
 
 import de.cau.cs.kieler.annotations.NamedObject
+import de.cau.cs.kieler.core.diagnostics.UnsupportedConstructException
 import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.kexpressions.FunctionCall
 import de.cau.cs.kieler.kexpressions.IgnoreValue
@@ -274,6 +275,11 @@ class KExpressionsSerializeHRExtensions extends KExpressionsSerializeExtensions 
     }
     
     protected def CharSequence serializeHROperatorExpressionNot(OperatorExpression expression) {
+        // Lab: KIELER fails here on a negation without operand (the suspend transformation builds one for a suspend
+        // without trigger). Name it, so that the code generator can report the construct instead of crashing.
+        if (expression.subExpressions.head === null) {
+            throw new UnsupportedConstructException("Unhandled parameter types: [null]", expression)
+        }
     	"!" + expression.subExpressions.head.serializeHR
     }
 

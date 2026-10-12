@@ -18,8 +18,12 @@ import de.cau.cs.kieler.annotations.Pragmatable
 import de.cau.cs.kieler.annotations.StringPragma
 import de.cau.cs.kieler.annotations.extensions.PragmaExtensions
 import de.cau.cs.kieler.annotations.registry.PragmaRegistry
+import de.cau.cs.kieler.core.diagnostics.Issue
+import de.cau.cs.kieler.core.diagnostics.UnsupportedConstructException
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
+import de.cau.cs.kieler.kexpressions.OperatorExpression
+import de.cau.cs.kieler.kexpressions.OperatorType
 import de.cau.cs.kieler.kicool.compilation.CodeContainer
 import de.cau.cs.kieler.kicool.compilation.Processor
 import de.cau.cs.kieler.kicool.compilation.ProcessorType
@@ -84,28 +88,52 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
         
         createModuleMap(rootModel, moduleMap)
         
-        for (moduleObject : moduleMap.keySet) {
-            moduleMap.get(moduleObject) => [
-                generateInit
-            ]
-        }
-        for (moduleObject : moduleMap.keySet) {
-            moduleMap.get(moduleObject) => [
-                generate
-            ]
-        }
-        for (moduleObject : moduleMap.keySet) {
-            moduleMap.get(moduleObject) => [
-                generateDone
-            ]
-        }
-        for (moduleObject : moduleMap.keySet) {
-            moduleMap.get(moduleObject) => [
-                generateWrite(result)
-            ]
+        try {
+            for (moduleObject : moduleMap.keySet) {
+                moduleMap.get(moduleObject) => [
+                    generateInit
+                ]
+            }
+            for (moduleObject : moduleMap.keySet) {
+                moduleMap.get(moduleObject) => [
+                    generate
+                ]
+            }
+            for (moduleObject : moduleMap.keySet) {
+                moduleMap.get(moduleObject) => [
+                    generateDone
+                ]
+            }
+            for (moduleObject : moduleMap.keySet) {
+                moduleMap.get(moduleObject) => [
+                    generateWrite(result)
+                ]
+            }
+        } catch (UnsupportedConstructException failure) {
+            if (!reportTriggerlessSuspend(failure)) throw failure
+            return
         }
         
         setModel(result)
+    }
+    
+    /**
+     * Lab: KIELER's code generators fail on a negation without operand. The suspend transformation builds the only
+     * such negation, for a suspend without trigger, and traces it to that suspend. Reports the suspend as an error;
+     * false if the failure is about something else.
+     */
+    protected def boolean reportTriggerlessSuspend(UnsupportedConstructException failure) {
+        val negation = failure.object
+        if (!(negation instanceof OperatorExpression) || (negation as OperatorExpression).operator != OperatorType.NOT) {
+            return false
+        }
+        val issue = Issue.at("unsupported-construct",
+            "This suspend has no trigger. KIELER cannot compile a suspend without an if condition.",
+            "Add the condition under which the state is suspended, for example suspend if pause.",
+            negation)
+        if (issue.locations.empty) return false
+        environment.errors.add(null, issue.message, null, issue)
+        return true
     }
     
     /**
