@@ -67,10 +67,12 @@ import de.cau.cs.kieler.sccharts.processors.For
 import de.cau.cs.kieler.sccharts.processors.MethodSignaling
 import de.cau.cs.kieler.sccharts.text.SCTXResource
 import de.cau.cs.kieler.scl.MethodImplementationDeclaration
+import java.util.List
 import java.util.Map
 import java.util.Set
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.emf.ecore.EObject
+import org.eclipse.xtext.nodemodel.util.NodeModelUtils
 import org.eclipse.xtext.validation.AbstractDeclarativeValidator
 import org.eclipse.xtext.validation.Check
 import org.eclipse.xtext.validation.CheckType
@@ -124,6 +126,14 @@ class SCTXValidator extends AbstractSCTXValidator {
     
     static val String STRONG_ABORT_WITH_LOW_PRIORITY = "Causality problem!\nStrong abort transitions must have a higher priority than weak abort or termination transitions.";
     static val String ABORT_WITHOUT_TRIGGER = "Abort transitions should have a trigger.";
+    
+    /** Lab: the infix assignment operator for each binary operator, for the relative write warning's suggestion. */
+    static val Map<OperatorType, String> INFIX_ASSIGNMENTS = #{
+        OperatorType.ADD -> "+=", OperatorType.SUB -> "-=", OperatorType.MULT -> "*=", OperatorType.DIV -> "/=",
+        OperatorType.MOD -> "%=", OperatorType.BITWISE_AND -> "&=", OperatorType.BITWISE_OR -> "|=",
+        OperatorType.BITWISE_XOR -> "^=", OperatorType.SHIFT_LEFT -> "<<=", OperatorType.SHIFT_RIGHT -> ">>=",
+        OperatorType.SHIFT_RIGHT_UNSIGNED -> ">>>="
+    }
     
     static val String MISSING_BINDING_FOR = "Missing binding for variable: ";
 
@@ -1212,11 +1222,54 @@ class SCTXValidator extends AbstractSCTXValidator {
                     (it.eContainer as OperatorExpression).subExpressions.size > 1
                 ].map[valuedObject].toSet
             if (readVOs.contains(assignment.reference.valuedObject)) {
-                warning("This assignment looks like old relative write SC syntax and is considered deprecated.\n" + 
-                    "If you want to create a relative write in new syntax, please use an infix assignment operator.", assignment, null
-                )
+                warning(assignment.relativeWriteMessage, assignment, null)
             }
         }
+    }
+    
+    /**
+     * Lab: the warning above fires on any assignment that reads its target as an operand. When the target is read
+     * exactly once, the dependency analysis (old SC syntax is on by default) schedules the assignment as a relative
+     * write, so the message says that, when it matters, and which infix assignments mean the same. Otherwise it keeps
+     * KIELER's wording.
+     */
+    private def String relativeWriteMessage(Assignment assignment) {
+        val target = assignment.reference.valuedObject
+        val expression = assignment.expression
+        val reads = (#[expression] + expression.eAllContents.toIterable).filter(ValuedObjectReference).filter[valuedObject == target].size
+        if (reads != 1) {
+            return "This assignment looks like old relative write SC syntax and is considered deprecated.\n"
+                + "If you want to create a relative write in new syntax, please use an infix assignment operator."
+        }
+        val name = assignment.reference.sourceText
+        val steps = assignment.infixSteps
+        return "This assignment reads " + name + ", so the compiler treats it as an update of " + name
+            + " (a relative write, as in the deprecated old SC syntax).\n"
+            + (if (steps !== null) "Write it as " + steps.join("; ") + " to say so. In one region it means the same.\n"
+               else "This expression has no infix assignment form. If you mean an update, write one, e.g. " + name + " += 1.\n")
+            + "It only matters when another region also writes " + name + " in the same tick: this assignment then runs"
+            + " after that write instead of conflicting with it."
+    }
+    
+    /** `x = (x * 10) + d` as `x *= 10`, `x += d`; null when the expression is not such a chain starting at x. */
+    private def List<String> infixSteps(Assignment assignment) {
+        val target = assignment.reference.sourceText
+        val steps = <String> newLinkedList
+        var expression = assignment.expression
+        while (expression instanceof OperatorExpression) {
+            val operation = expression as OperatorExpression
+            val operator = INFIX_ASSIGNMENTS.get(operation.operator)
+            if (operator === null || operation.subExpressions.size < 2) return null
+            for (operand : operation.subExpressions.drop(1).toList.reverseView) {
+                steps.addFirst(target + " " + operator + " " + operand.sourceText)
+            }
+            expression = operation.subExpressions.head
+        }
+        return if (expression instanceof ValuedObjectReference && expression.sourceText == target) steps else null
+    }
+    
+    private def String sourceText(EObject object) {
+        NodeModelUtils.getTokenText(NodeModelUtils.findActualNodeFor(object))
     }
 
 
