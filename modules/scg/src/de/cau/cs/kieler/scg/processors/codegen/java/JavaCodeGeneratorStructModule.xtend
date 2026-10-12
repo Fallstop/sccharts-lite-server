@@ -15,6 +15,8 @@ package de.cau.cs.kieler.scg.processors.codegen.java
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
 import de.cau.cs.kieler.annotations.extensions.PragmaExtensions
+import de.cau.cs.kieler.core.diagnostics.Issue
+import de.cau.cs.kieler.core.diagnostics.SourceTrace
 import de.cau.cs.kieler.kexpressions.Declaration
 import de.cau.cs.kieler.kexpressions.MethodDeclaration
 import de.cau.cs.kieler.kexpressions.TextExpression
@@ -162,6 +164,13 @@ class JavaCodeGeneratorStructModule extends CCodeGeneratorStructModule {
     }
     
     protected def void generateMethodDeclarations(List<Declaration> declarations, int depth, extension CCodeSerializeHRExtensions serializer) {
+        // KIELER fails below with "Could not find SCG for method" on a method that has no SCG. Only a method with
+        // statements gets one (SCGTransformation), so report each method without a body on its declaration instead.
+        val withoutBody = declarations.filter(MethodDeclaration).filter[method | !getSCGraphs.scgs.exists[isMethod && methodDeclaration === method]].toList
+        if (!withoutBody.empty) {
+            withoutBody.forEach[reportMethodWithoutBody]
+            return
+        }
         for (method : declarations.filter(MethodDeclaration)) {
             val methodSCG = getSCGraphs.scgs.findFirst[isMethod && methodDeclaration === method]
             if (methodSCG === null) {
@@ -208,6 +217,17 @@ class JavaCodeGeneratorStructModule extends CCodeGeneratorStructModule {
             indent(depth+1)
             code.append("}\n\n")
         }
+    }
+    
+    /** Diagnostics: a method without statements as a located compile error, named as the chart declares it. */
+    protected def reportMethodWithoutBody(MethodDeclaration method) {
+        val valuedObject = method.valuedObjects.head
+        val name = (SourceTrace.locations(valuedObject).map[label].findFirst[it !== null && matches("\\^?\\w+'*")] ?: valuedObject.name).replaceFirst("^\\^", "")
+        val issue = Issue.at("unsupported-construct", "Method " + name + " has no statements. "
+                + "KIELER's Java code generator cannot compile a method without a body, so this chart cannot be compiled to Java.",
+            "Give " + name + " a body with at least one statement, e.g. a return statement, or delete the method and its calls. "
+                + "Only the C code generators accept a method without a body, as a call to an external C function.", method)
+        processorInstance.environment.errors.add(null, issue.message, method, issue)
     }
     
     protected def createConstructor(List<Declaration> declarations, String contructorName, String additionalCode, int depth, extension CCodeSerializeHRExtensions serializer) {
