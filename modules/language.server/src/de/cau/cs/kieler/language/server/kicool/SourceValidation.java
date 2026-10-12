@@ -89,12 +89,8 @@ public final class SourceValidation {
         }
         if (!errors.isEmpty()) throw new InvalidSource(errors);
         for (var problem : source.getResourceServiceProvider().getResourceValidator().validate(source, CheckMode.FAST_ONLY, CancelIndicator.NullImpl)) {
-            if (problem.getSeverity() != Severity.ERROR) continue;
-            String code = problem.getCode();
+            if (!blocksCompilation(problem)) continue;
             String message = problem.getMessage();
-            // Other semantic checks have more detailed, traced explanations in their compiler processors.
-            if (!problem.isSyntaxError() && !Diagnostic.LINKING_DIAGNOSTIC.equals(code)
-                && !message.startsWith("Every region must") && !message.startsWith("Connector states must")) continue;
             Issue issue = new Issue("source-validation", message);
             issue.hint = "Fix this source error before compiling again.";
             issue.locations.add(location(source, problem.getOffset() == null ? 0 : problem.getOffset(),
@@ -103,6 +99,18 @@ public final class SourceValidation {
         }
         if (!errors.isEmpty()) throw new InvalidSource(errors);
         if (source.getContents().isEmpty()) throw invalid(uri, "There is no SCChart to compile. Add a scchart declaration first.");
+    }
+
+    /**
+     * Whether a validator finding stops compilation: syntax and linking errors leave an incomplete model behind, and two
+     * structural errors break the transformations. The official KIELER compiler compiles despite its other semantic
+     * errors, which have more detailed, traced explanations in their compiler processors.
+     */
+    public static boolean blocksCompilation(org.eclipse.xtext.validation.Issue problem) {
+        if (problem.getSeverity() != Severity.ERROR) return false;
+        String message = problem.getMessage();
+        return problem.isSyntaxError() || Diagnostic.LINKING_DIAGNOSTIC.equals(problem.getCode())
+            || message != null && (message.startsWith("Every region must") || message.startsWith("Connector states must"));
     }
 
     private static InvalidSource invalid(String uri, String message) {

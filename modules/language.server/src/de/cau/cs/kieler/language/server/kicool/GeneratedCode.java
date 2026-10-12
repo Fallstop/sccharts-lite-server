@@ -49,13 +49,14 @@ public final class GeneratedCode {
 
     private static void validate(String uri, String target) {
         if (!"sctx".equals(URI.createURI(uri).fileExtension())) return;
-        // The compiler loads from disk and can recover an AST from invalid input. Never export that recovery.
+        // Xtext can recover an AST from invalid input. Never export that recovery. Other validator errors do not stop
+        // the official compiler from generating code, so they do not stop the export either.
         var injector = SCTXStandaloneSetup.doSetup();
         var resources = injector.getInstance(XtextResourceSet.class);
         var resource = resources.getResource(URI.createURI(uri), true);
         var issues = injector.getInstance(IResourceValidator.class).validate(resource, CheckMode.ALL, CancelIndicator.NullImpl);
         for (var issue : issues) {
-            if (issue.getSeverity() == org.eclipse.xtext.diagnostics.Severity.ERROR) {
+            if (SourceValidation.blocksCompilation(issue)) {
                 Issue diagnostic = new Issue("code-generation", "Cannot generate code: " + issue.getMessage()
                     + (issue.getLineNumber() == null ? "" : " (line " + issue.getLineNumber() + ")") + ". See Problems for source errors.");
                 diagnostic.locations.add(new Issue.Location(uri, issue.getOffset() == null ? 0 : issue.getOffset(),
