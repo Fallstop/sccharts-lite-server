@@ -98,6 +98,19 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   `shared-clock`), `Inheritance` (`inheritance-conflict`) and the loop analyzer's schizophrenic
   sequential fork (`schizophrenic-fork`) use it. Every other message that carries a model object
   is located through `SourceTrace.locations`, so it survives the copies the chain makes.
+- KIELER crashes as compile errors: where the official compiler crashes or hangs on a chart, the
+  lab rejects the same chart under the same condition with an `unsupported-construct` issue on the
+  construct and a hint, instead of an internal error. `Reference` (recursive references), `For`
+  (unusable ranges), `Const` via `PartialExpressionEvaluator` (constant division by zero, chains it
+  cannot fold), `Pre` (pre in call arguments, returns, declarations), `Suspend`/`WeakSuspend` and the
+  code generators (suspends without a trigger), `CCodeGeneratorLogicModule` (emitting a variable),
+  `TimedAutomata` and `AbstractCodeGenerator` (`@DefaultSleep`, `#code.naming`, `@eval` without
+  values), `JavaCodeGeneratorStructModule` (methods without a body) and the priority and state-based
+  generators (`MissingSuccessor`, `DeSurfaceDepth`). Code that has no environment throws
+  `core/diagnostics/UnsupportedConstructException` for the running processor to report.
+  `CompilationContext` turns a `StackOverflowError` into `compiler-stack-overflow`.
+- `core/diagnostics/Divergence`: where the lab compiles a chart KIELER fails on, it says so with a
+  `kieler-divergence` warning. Only `Pre` does: a bare `pre(x)` as the trigger of a state action.
 - `simulation/diagnostics`: `SimulationStrings` rewrites the C simulation template so string
   inputs outlive their JSON message.
 - `klighd.lsp`: trace strings on diagram elements (`KGraphDiagramGenerator.publishTraces`),
@@ -107,6 +120,8 @@ Formerly 18 ASM bytecode hooks in the extension's `server-src/BuildPatch`; now:
   `AbstractLanguageServer.addToMainThreadQueue`.
 - `language.server`: `CompilationResults`/`SnapshotDescription` with `diagnostics`,
   `generatedFiles` and `generationError`; `GeneratedCode` validates and collects in-memory files.
+  It refuses to export only for the source errors that stop compilation
+  (`SourceValidation.blocksCompilation`); KIELER exports despite other validator errors.
 - `language.server/diagnostics`: `LiveDiagnosticsExtension` analyses open `.sctx` documents after
   every edit. It listens to Xtext's build (`ILanguageServerAccess.addBuildListener`), waits for the
   edits to settle (default 400 ms, `keith/diagnostics/configure {enabled, debounceMs}`), takes a
