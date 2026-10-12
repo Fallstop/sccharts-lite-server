@@ -16,6 +16,7 @@ import com.google.inject.Inject
 import com.google.inject.Injector
 import de.cau.cs.kieler.scg.codegen.SCGCodeGeneratorModule
 import de.cau.cs.kieler.scg.processors.codegen.c.CCodeGenerator
+import de.cau.cs.kieler.scg.diagnostics.MissingSuccessor
 
 /**
  * C Prio Code Processor
@@ -36,6 +37,16 @@ class CPrioCodeGenerator extends CCodeGenerator {
     
     override getName() {
         "C Prio Code"
+    }
+    
+    override process() {
+        try {
+            super.process
+        } catch (MissingSuccessor missing) {
+            // Lab: the logic module stops where KIELER fails; report the chart or region that has no state to start in.
+            val issue = missing.issue("priority-based compiler")
+            environment.errors.add(null, issue.message, missing.node, issue)
+        }
     }
     
     override SCGCodeGeneratorModule createCodeGeneratorModule() {

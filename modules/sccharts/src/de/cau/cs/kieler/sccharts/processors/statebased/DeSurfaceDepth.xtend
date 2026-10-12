@@ -13,6 +13,7 @@
 package de.cau.cs.kieler.sccharts.processors.statebased
 
 import com.google.inject.Inject
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.kicool.environments.AnnotationModel
 import de.cau.cs.kieler.kicool.kitt.tracing.Traceable
 import de.cau.cs.kieler.sccharts.ControlflowRegion
@@ -101,6 +102,20 @@ class DeSurfaceDepth extends SCChartsProcessor implements Traceable {
             }
         }
         
+        // Lab: two marked states whose transitions lead to each other make KIELER fail below: merging the first
+        // deletes the second's only transition. Report them on the source instead of merging.
+        val alternating = sdStates.filter[ s |
+            val other = s.outgoingTransitions.head.targetState
+            other != s && sdStates.contains(other) && other.outgoingTransitions.head.targetState == s
+        ].toList
+        if (!alternating.empty) {
+            for (state : alternating) {
+                val other = state.outgoingTransitions.head.targetState
+                if (alternating.indexOf(state) < alternating.indexOf(other)) state.reportAlternation(other)
+            }
+            return
+        }
+        
         for (state : sdStates) {
             val oT = state.outgoingTransitions.head
             val tS = oT.targetState
@@ -143,6 +158,17 @@ class DeSurfaceDepth extends SCChartsProcessor implements Traceable {
             }
         }
         
+    }
+    
+    /** Diagnostics: two states that hand control to each other on every tick and do nothing else. */
+    private def reportAlternation(State first, State second) {
+        val names = if (first.name.nullOrEmpty || second.name.nullOrEmpty || first.name.startsWith("_") || second.name.startsWith("_"))
+            "Two states" else "States " + first.name + " and " + second.name
+        val issue = Issue.at("unsupported-construct", names + " hand control to each other on every tick with plain"
+                + " `go to` transitions, which KIELER's state-based compiler cannot compile.",
+            "KIELER fails on this chart too. Give one of these `go to` transitions a trigger or an action, or merge the"
+                + " two states. The priority-based and netlist-based compilers accept the chart as it is.", first, second)
+        environment.errors.add(null, issue.message, first, issue)
     }
     
 }

@@ -37,6 +37,7 @@ import de.cau.cs.kieler.scg.extensions.SCGCoreExtensions
 import de.cau.cs.kieler.annotations.AnnotationsFactory
 import de.cau.cs.kieler.scg.processors.codegen.prio.c.CPrioCodeGeneratorLogicModule
 import de.cau.cs.kieler.scg.processors.codegen.c.CCodeSerializeHRExtensions
+import de.cau.cs.kieler.scg.diagnostics.MissingSuccessor
 
 /**
  * Java Prio Code Generator Logic Module
@@ -115,6 +116,9 @@ class JavaPrioCodeGeneratorLogicModule extends CPrioCodeGeneratorLogicModule {
                 GatherPriosNode: { node.gather(this) }
                 JoinPrioNode: { globalJoinPrios = node.joinPrioSet }
                 default: {
+                    // Lab: KIELER fails in processNode on a control flow without a target (a chart or region with
+                    // no state to start in); the processor reports it on the source instead.
+                    if (node === null) throw new MissingSuccessor(previousNodes.peek)
                     val newNodes = node.processNode(previousNodes, visited)
                     newNodes.reverse.forEach[ nodes.push(it) ]                                        
                 }

@@ -43,6 +43,7 @@ import de.cau.cs.kieler.scg.Node
 import de.cau.cs.kieler.scg.SCGraph
 import de.cau.cs.kieler.scg.SCGraphs
 import de.cau.cs.kieler.scg.Surface
+import de.cau.cs.kieler.scg.diagnostics.MissingSuccessor
 import de.cau.cs.kieler.scg.extensions.SCGControlFlowExtensions
 import java.util.Deque
 import java.util.List
@@ -98,9 +99,15 @@ class SCG2SCCProcessor extends Processor<SCGraphs, SCCharts> implements Traceabl
             it.trace(model)
             
             scgs.copyPragmas(it)
-            
-            rootStates.addAll(scgs.scgs.map[ transform ])
         ]
+        try {
+            sccharts.rootStates.addAll(scgs.scgs.map[ transform ])
+        } catch (MissingSuccessor missing) {
+            // Lab: the walk stops where KIELER fails; report the chart or region that has no state to start in.
+            val issue = missing.issue("state-based compiler")
+            environment.errors.add(null, issue.message, missing.node, issue)
+            return
+        }
         setModel(sccharts)
         
         snapshot
@@ -123,6 +130,9 @@ class SCG2SCCProcessor extends Processor<SCGraphs, SCCharts> implements Traceabl
         while (!nodeList.empty) {
             val node = nodeList.pop
             
+            // Lab: KIELER fails here (no transformNode case for null) on a control flow without a target.
+            if (node.key === null) throw new MissingSuccessor(MissingSuccessor.source(scg, visited), scg)
+            
             // Skip nodes that have already been visited, 
             // but connect loose ends.
             if (!visited.contains(node.key)) {
@@ -142,7 +152,7 @@ class SCG2SCCProcessor extends Processor<SCGraphs, SCCharts> implements Traceabl
         val parentState = scopeStack.peek as State
         
         // Entry nodes introduce a thread which corresponds to a region.
-        val newRegion = parentState.createControlflowRegionWithoutLabel(entry.adoptName("region"))
+        val newRegion = parentState.createControlflowRegionWithoutLabel(entry.adoptName("region")).trace(entry) // Lab: diagnostics provenance
         scopeStack.push(newRegion)
         
         // Queue the exit node to make sure that the exit node is the last node in this thread.
@@ -287,7 +297,7 @@ class SCG2SCCProcessor extends Processor<SCGraphs, SCCharts> implements Traceabl
     protected def dispatch void transformNode(Surface surface, Transition incoming, SCGraph scg, Deque<Pair<Node, Transition>> nodeList, Deque<Scope> scopeStack, ValuedObjectMapping map) {
         visited += surface
         val parentRegion = scopeStack.peek as ControlflowRegion
-        val newState = parentRegion.createState(surface.adoptName("state"))
+        val newState = parentRegion.createState(surface.adoptName("state")).trace(surface) // Lab: diagnostics provenance
 
         if (environment.getProperty(COPY_ANNOTATIONS)) {
             surface.depth.copyAnnotations(newState)
