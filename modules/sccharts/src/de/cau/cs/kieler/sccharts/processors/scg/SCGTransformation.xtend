@@ -43,6 +43,7 @@ import de.cau.cs.kieler.kexpressions.extensions.KExpressionsCreateExtensions
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsDeclarationExtensions
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsValuedObjectExtensions
 import de.cau.cs.kieler.kexpressions.keffects.Effect
+import de.cau.cs.kieler.kexpressions.keffects.Emission
 import de.cau.cs.kieler.kexpressions.keffects.FunctionCallEffect
 import de.cau.cs.kieler.kexpressions.keffects.HostcodeEffect
 import de.cau.cs.kieler.kexpressions.keffects.PrintCallEffect
@@ -77,6 +78,7 @@ import de.cau.cs.kieler.scg.SCGraph
 import de.cau.cs.kieler.scg.SCGraphs
 import de.cau.cs.kieler.scg.ScgFactory
 import de.cau.cs.kieler.scg.Surface
+import de.cau.cs.kieler.scg.diagnostics.Emissions
 import de.cau.cs.kieler.scl.MethodImplementationDeclaration
 import de.cau.cs.kieler.scl.processors.transformators.SCLToSCGTransformation
 import java.util.HashMap
@@ -594,6 +596,11 @@ class SCGTransformation extends Processor<SCCharts, SCGraphs> implements Traceab
     			assignment.setExpression(effect.convertToSCGExpression.trace(transition, effect))
     		    } else if (effect instanceof ReferenceCallEffect) {
     			assignment.setExpression(effect.convertToSCGExpression.trace(transition, effect))
+    		    } else if (effect instanceof Emission) {
+    			// Diagnostics: the SCG has no operation for emitting a non-signal, so this assignment stays empty and
+    			// the code generators fail on it, as in KIELER. Record the emission so that they can name it.
+    			assignment.trace(effect)
+    			Emissions.record(environment, effect)
     		    }
     		    
     		    if (!effect.schedule.nullOrEmpty) {

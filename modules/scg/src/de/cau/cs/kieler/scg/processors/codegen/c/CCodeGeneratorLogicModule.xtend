@@ -13,6 +13,7 @@
 package de.cau.cs.kieler.scg.processors.codegen.c
 
 import de.cau.cs.kieler.kicool.diagnostics.GeneratedTrace
+import de.cau.cs.kieler.scg.diagnostics.Emissions
 import de.cau.cs.kieler.scg.diagnostics.ScgTrace
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.StringAnnotation
@@ -171,7 +172,18 @@ class CCodeGeneratorLogicModule extends SCGCodeGeneratorModule {
                     code.append((assignment.expression as ReferenceCall).serializeHR).append(";\n")
                 }
             } else {
-                throw new NullPointerException("Assigned valued object is null or not supported")
+                // Diagnostics: KIELER fails here. An emission of a non-signal arrives as such an empty assignment;
+                // it is rejected with an error at the emission instead.
+                val issues = Emissions.issues(processorInstance?.environment, assignment)
+                if (issues.empty) {
+                    throw new NullPointerException("Assigned valued object is null or not supported")
+                }
+                val errors = processorInstance.environment.errors
+                for (issue : issues) {
+                    if (!errors.allRootMessages.exists[ payload === issue ]) {
+                        errors.add(null, issue.message, assignment, issue)
+                    }
+                }
             }
 
         } else if (assignment.isReturn) {
