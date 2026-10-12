@@ -13,10 +13,12 @@
 package de.cau.cs.kieler.sccharts.processors
 
 import com.google.inject.Inject
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.kexpressions.IntValue
 import de.cau.cs.kieler.kexpressions.ValuedObjectReference
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsCreateExtensions
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsDeclarationExtensions
+import de.cau.cs.kieler.kexpressions.extensions.KExpressionsSerializeHRExtensions
 import de.cau.cs.kieler.kicool.kitt.tracing.Traceable
 import de.cau.cs.kieler.sccharts.Region
 import de.cau.cs.kieler.sccharts.State
@@ -36,6 +38,7 @@ class For extends SCChartsProcessor implements Traceable {
     @Inject extension KExpressionsDeclarationExtensions
     @Inject extension KExpressionsCreateExtensions
     @Inject extension SCChartsScopeExtensions
+    @Inject extension KExpressionsSerializeHRExtensions
     
     override getId() {
         "de.cau.cs.kieler.sccharts.processors.for"
@@ -49,16 +52,42 @@ class For extends SCChartsProcessor implements Traceable {
         val model = getModel
         
         for (rootState : model.rootStates) {
-            rootState.transformFor    
+            if (!rootState.transformFor) return
         }
     }
     
-    protected def transformFor(State state) {
+    protected def boolean transformFor(State state) {
         val forRegions = state.getAllStates.map[regions.filter[ counterVariable !== null ]].toList.flatten.toList
+        
+        // getForRegionRange fails on these ranges in KIELER too: report them on the source instead.
+        val unsupportedRanges = forRegions.filter[ forStart instanceof IntValue && !(forEnd instanceof IntValue) ].toList
+        if (!unsupportedRanges.empty) {
+            unsupportedRanges.forEach[ reportUnsupportedRange ]
+            return false
+        }
         
         for (r : forRegions) {
             r.transformForRegion
         }
+        return true
+    }
+    
+    /** Diagnostics: a range that starts at a number but has no end, or ends at a variable, as a located, explained issue. */
+    private def reportUnsupportedRange(Region region) {
+        val range = "for " + region.counterVariable.name + " : " + region.forStart.serializeHR
+            + if (region.forEnd === null) "" else " to " + region.forEnd.serializeHR
+        val portable = "Write both bounds as integer literals, such as \"for " + region.counterVariable.name
+            + " : 0 to 2\", or loop over an array x with \"for " + region.counterVariable.name + " : x\" (indices 0 to its size - 1)."
+        val issue = if (region.forEnd === null) {
+            Issue.at("unsupported-construct", "The for-region range \"" + range + "\" has a start value but no end value.",
+                "KIELER cannot compile a for-region that starts at a number without \"to <end>\". " + portable, region.forStart)
+        } else {
+            Issue.at("unsupported-construct", "The for-region range \"" + range + "\" ends at " + region.forEnd.serializeHR
+                + ", which is not an integer literal.",
+                "KIELER cannot compile a for-region that starts at a number and ends at a variable, even a const. " + portable,
+                region.forEnd)
+        }
+        environment.errors.add(null, issue.message, region, issue)
     }
     
     protected def transformForRegion(Region region) {
