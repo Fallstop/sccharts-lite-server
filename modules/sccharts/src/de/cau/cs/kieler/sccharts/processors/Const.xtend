@@ -15,10 +15,12 @@ package de.cau.cs.kieler.sccharts.processors
 
 import com.google.inject.Inject
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.kexpressions.BoolValue
 import de.cau.cs.kieler.kexpressions.FloatValue
 import de.cau.cs.kieler.kexpressions.IntValue
 import de.cau.cs.kieler.kexpressions.KExpressionsPackage
+import de.cau.cs.kieler.kexpressions.OperatorType
 import de.cau.cs.kieler.kexpressions.TextExpression
 import de.cau.cs.kieler.kexpressions.Value
 import de.cau.cs.kieler.kexpressions.ValuedObject
@@ -26,6 +28,7 @@ import de.cau.cs.kieler.kexpressions.ValuedObjectReference
 import de.cau.cs.kieler.kexpressions.VariableDeclaration
 import de.cau.cs.kieler.kexpressions.VectorValue
 import de.cau.cs.kieler.kexpressions.eval.PartialExpressionEvaluator
+import de.cau.cs.kieler.kexpressions.eval.UncomputableExpressionException
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsDeclarationExtensions
 import de.cau.cs.kieler.kexpressions.extensions.KExpressionsValuedObjectExtensions
 import de.cau.cs.kieler.kexpressions.keffects.Assignment
@@ -93,7 +96,9 @@ class Const extends SCChartsProcessor implements Traceable {
 
         // Traverse all states
         for (scope : targetRootState.getAllScopes.filter[ it.hasConstant ].toList) {
-            scope.evaluateExpressions
+            if (!scope.evaluateExpressions) {
+                return targetRootState
+            }
             scope.transformConst
         }
         targetRootState;
@@ -183,15 +188,42 @@ class Const extends SCChartsProcessor implements Traceable {
 
     }
     
-    def void evaluateExpressions(Scope scope) {
+    /** Returns false, after reporting an error, if a constant cannot be computed. */
+    def boolean evaluateExpressions(Scope scope) {
         val constObjects = scope.valuedObjects.filter[isConst && initialValue !== null].toList
         
         for (vo : constObjects) {
-            vo.initialValue.evaluateAndReplace
+            try {
+                vo.initialValue.evaluateAndReplace
+            } catch (UncomputableExpressionException e) {
+                vo.reportUncomputable(e)
+                return false
+            }
             if (vo.initialValue instanceof Value) {
                 par.values.put(vo, vo.initialValue as Value)
             } 
         }
+        return true
+    }
+    
+    /** Diagnostics: a constant whose value KIELER fails to compute, as a located, explained issue at the expression it fails on. */
+    private def reportUncomputable(ValuedObject const, UncomputableExpressionException e) {
+        val expression = e.expression ?: const.initialValue
+        val issue = switch (e.reason) {
+            case DIVISION_BY_ZERO: Issue.at("unsupported-construct",
+                "Constant " + const.name + (if (e.expression?.operator == OperatorType.MOD) " takes a remainder of a division by zero." else " divides by zero."),
+                "The value of a constant is computed when the chart is compiled, and an integer division or remainder (/ or %) by zero has no value. "
+                    + "Change the divisor so that it is not zero (integer division rounds towards zero, so a divisor such as 1 / 2 is zero too). "
+                    + "The official KIELER compiler cannot compile this constant either.",
+                expression)
+            default: Issue.at("unsupported-construct",
+                "Constant " + const.name + " chains three or more operands with one operator, which the compiler can only compute for numbers.",
+                "Write the constant's value out as a single literal (for example one string instead of strings joined with +), "
+                    + "or use parentheses so that each operator joins just two operands, as in (a + b) + c. "
+                    + "The official KIELER compiler cannot compile this constant either.",
+                expression)
+        }
+        environment.errors.add(null, issue.message, expression, issue)
     }
     
     

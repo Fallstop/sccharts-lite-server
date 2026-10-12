@@ -225,7 +225,13 @@ class PartialExpressionEvaluator {
                         // TODO This might become a problem
                         return createIntValue(0 - (newOp.subExpressions.head as IntValue).value)
                     } else if (compute && newOp.subExpressions.size > 1) {
-                        return newOp.compute
+                        try {
+                            return newOp.compute
+                        } catch (UncomputableExpressionException e) {
+                            // newOp is a fresh copy, so name the expression in the model
+                            e.expression = op
+                            throw e
+                        }
                     }
                 }
                 return newOp
@@ -281,13 +287,20 @@ class PartialExpressionEvaluator {
     
     /**
      * Returns null if eval should be aborted
+     *
+     * @throws UncomputableExpressionException where upstream KIELER fails on the expression
      */
     def Value compute(OperatorExpression oexp) {
         while (oexp.subExpressions.size > 2) {
             val partialOE = createOperatorExpression(oexp.operator)
             partialOE.subExpressions += oexp.subExpressions.head
             partialOE.subExpressions += oexp.subExpressions.head
-            oexp.subExpressions.add(0, partialOE.compute)
+            val partial = partialOE.compute
+            if (partial === null) {
+                // Upstream adds null here and fails on the list's 'no null' constraint
+                throw new UncomputableExpressionException(UncomputableExpressionException.Reason.UNCOMPUTABLE_CHAIN)
+            }
+            oexp.subExpressions.add(0, partial)
         }
         // Only compute integer/bool
         if (oexp.subExpressions.forall[it instanceof IntValue || it instanceof BoolValue]) {
@@ -322,13 +335,23 @@ class PartialExpressionEvaluator {
                 case BITWISE_OR: createIntValue(op0.bitwiseOr(op1))
                 case BITWISE_XOR: createIntValue(op0.bitwiseXor(op1))
                 case DIV: {
+                    if (op1 == 0) {
+                        // Upstream fails here with an ArithmeticException
+                        throw new UncomputableExpressionException(UncomputableExpressionException.Reason.DIVISION_BY_ZERO)
+                    }
                     if (op0 % op1 == 0) {
                         createIntValue(op0 / op1)
                     } else { 
                         createIntValue(op0 / op1)
                     }
                 }
-                case MOD: createIntValue(op0 % op1)
+                case MOD: {
+                    if (op1 == 0) {
+                        // Upstream fails here with an ArithmeticException
+                        throw new UncomputableExpressionException(UncomputableExpressionException.Reason.DIVISION_BY_ZERO)
+                    }
+                    createIntValue(op0 % op1)
+                }
                 case MULT: createIntValue(op0 * op1)
                 case SHIFT_LEFT: createIntValue(op0 << op1)
                 case SHIFT_RIGHT: createIntValue(op0 >> op1)
