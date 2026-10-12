@@ -45,6 +45,9 @@ class CompilationThread extends Thread {
             context.compile()
         } catch (Exception failure) {
             onFailure.accept(failure)
+        } catch (StackOverflowError failure) {
+            // Without an answer the editor would wait for this compilation forever.
+            onFailure.accept(new IllegalStateException("The compiler ran out of stack space.", failure))
         } finally {
             CompileGate.unlock()
         }

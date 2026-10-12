@@ -48,6 +48,7 @@ import static extension de.cau.cs.kieler.kicool.compilation.internal.UniqueNameC
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.addTracingProperty
 import static extension de.cau.cs.kieler.kicool.kitt.tracing.internal.TracingIntegration.isTracingActive
 import de.cau.cs.kieler.kicool.diagnostics.GeneratedTrace
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.core.diagnostics.SourceTrace
 
 /**
@@ -219,6 +220,14 @@ class CompilationContext extends Observable implements IKiCoolCloneable {
             notify(new ProcessorError(e.message, this, processorReference, processorInstance))
             System.err.println("Error in processor " + processorReference)
             e.printStackTrace
+        } catch (StackOverflowError e) {
+            // Unbounded recursion in the chart, such as a method that calls itself, overflows the processor's stack.
+            // KIELER's compilation thread dies on it and never answers; report it so the compilation finishes.
+            val issue = Issue.at("compiler-stack-overflow", "The compiler ran out of stack space during " + processorInstance.name + ".",
+                "This usually means unbounded recursion in the chart, such as a method that calls itself or charts that reference each other. The official KIELER compiler cannot compile it either.",
+                if (originalModel instanceof EObject) originalModel as EObject)
+            processorInstance.environment.errors.add(null, issue.message, null, issue)
+            notify(new ProcessorError(issue.message, this, processorReference, processorInstance))
         }
         val pEndTimestamp = System.nanoTime
         environmentPrime.setProperty(PROCESSOR_TIME, (pEndTimestamp - pStartTimestamp))
