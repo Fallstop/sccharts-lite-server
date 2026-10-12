@@ -38,7 +38,7 @@ public final class GeneratedCode {
         } catch (Exception error) {
             result.generationError = error.getMessage() == null ? error.toString() : error.getMessage();
             Issue issue = error instanceof InvalidSource ? ((InvalidSource) error).issue
-                : new Issue("code-generation", result.generationError);
+                : SourceValidation.internalFailure("code export", error, null, uri);
             // The final snapshot is the code container; use its existing stage for Problems and navigation.
             var stages = result.files.get(result.files.size() - 1);
             var stage = stages.get(stages.size() - 1);
@@ -70,16 +70,17 @@ public final class GeneratedCode {
                 EObject object = contents.next();
                 if (object instanceof Pragmatable) {
                     var pragmas = ((Pragmatable) object).getPragmas();
-                    if (pragmas.stream().anyMatch(p -> p.getName().equals("hostcode-" + other))
-                        && pragmas.stream().noneMatch(p -> p.getName().equals("hostcode-" + target))) {
+                    if (pragmas.stream().anyMatch(p -> ("hostcode-" + other).equals(p.getName()))
+                        && pragmas.stream().noneMatch(p -> ("hostcode-" + target).equals(p.getName()))) {
                         throw incompatible(target, "#hostcode-" + other, "#hostcode-" + target,
-                            pragmas.stream().filter(p -> p.getName().equals("hostcode-" + other)).findFirst().get());
+                            pragmas.stream().filter(p -> ("hostcode-" + other).equals(p.getName())).findFirst().get());
                     }
                 }
                 if (object instanceof Annotatable) {
                     var annotations = ((Annotatable) object).getAnnotations();
-                    if (annotations.stream().anyMatch(a -> a.getName().equalsIgnoreCase(other))
-                        && annotations.stream().noneMatch(a -> a.getName().equalsIgnoreCase(target))) {
+                    // A /** documentation comment */ is an annotation without a name.
+                    if (annotations.stream().anyMatch(a -> other.equalsIgnoreCase(a.getName()))
+                        && annotations.stream().noneMatch(a -> target.equalsIgnoreCase(a.getName()))) {
                         throw incompatible(target, other.equals("c") ? "@C" : "@Java", target.equals("c") ? "@C" : "@Java", object);
                     }
                 }
