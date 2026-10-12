@@ -24,6 +24,7 @@ import de.cau.cs.kieler.kexpressions.Declaration
 import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.kexpressions.FloatValue
 import de.cau.cs.kieler.kexpressions.IntValue
+import de.cau.cs.kieler.kexpressions.JsonAnnotation
 import de.cau.cs.kieler.kexpressions.MethodDeclaration
 import de.cau.cs.kieler.kexpressions.OperatorExpression
 import de.cau.cs.kieler.kexpressions.OperatorType
@@ -147,8 +148,14 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
         val timePrintFormat = if (allAnnotations.filter(StringAnnotation).exists[TIME_FORMAT_NAME.equalsIgnoreCase(name)]) allAnnotations.filter(StringAnnotation).findFirst[TIME_FORMAT_NAME.equalsIgnoreCase(name)].values.head else isIntClockType ? TIME_FORMAT_INT_DEFAULT : TIME_FORMAT_FLOAT_DEFAULT
         
         // Get max sleep
-        val maxSleep = if (allAnnotations.exists[MAX_SLEEP_NAME.equalsIgnoreCase(name)]) {
-            val value = allAnnotations.findFirst[MAX_SLEEP_NAME.equalsIgnoreCase(name)].asStringAnnotation.values.head
+        val maxSleepAnnotation = allAnnotations.findFirst[MAX_SLEEP_NAME.equalsIgnoreCase(name)]
+        if (maxSleepAnnotation !== null && !(maxSleepAnnotation instanceof StringAnnotation)) {
+            // Diagnostics: KIELER fails reading this value; report it on the annotation and leave the model as it is.
+            reportAnnotationWithoutValue(maxSleepAnnotation)
+            return
+        }
+        val maxSleep = if (maxSleepAnnotation !== null) {
+            val value = maxSleepAnnotation.asStringAnnotation.values.head
             if (!value.nullOrEmpty) {
                 try {
                     Double.parseDouble(value)
@@ -677,5 +684,19 @@ class TimedAutomata extends SCChartsProcessor implements Traceable {
     private def reportSharedClock(State state, ValuedObject clock, String message, String hint) {
         val issue = Issue.at("shared-clock", message, hint, state, clock)
         environment.errors.add(null, issue.message, state, issue)
+    }
+
+    /**
+     * Diagnostics: @DefaultSleep written without a value (a tag) or with a JSON object. KIELER fails on it with a
+     * ClassCastException when it reads the value as a string.
+     */
+    private def reportAnnotationWithoutValue(Annotation annotation) {
+        val issue = Issue.at("unsupported-construct", "@" + annotation.name + " needs a "
+                + (if (annotation instanceof JsonAnnotation) "plain value, not a JSON object" else "value")
+                + ", e.g. @" + annotation.name + " 100.",
+            "Write the default sleep time after @" + annotation.name + ", or remove the annotation to keep the default of "
+                + MAX_SLEEP_DEFAULT + ". The official KIELER compiler cannot compile this @" + annotation.name + " either.",
+            annotation)
+        environment.errors.add(null, issue.message, annotation, issue)
     }
 }

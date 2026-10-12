@@ -16,15 +16,18 @@ import com.google.common.collect.HashMultimap
 import com.google.common.collect.Multimap
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import de.cau.cs.kieler.annotations.Annotation
 import de.cau.cs.kieler.annotations.StringAnnotation
 import de.cau.cs.kieler.annotations.extensions.AnnotationsExtensions
 import de.cau.cs.kieler.annotations.registry.AnnotationsRegistry
 import de.cau.cs.kieler.annotations.registry.AnnotationsType
+import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.kexpressions.BoolValue
 import de.cau.cs.kieler.kexpressions.Expression
 import de.cau.cs.kieler.kexpressions.FloatValue
 import de.cau.cs.kieler.kexpressions.FunctionCall
 import de.cau.cs.kieler.kexpressions.IntValue
+import de.cau.cs.kieler.kexpressions.JsonAnnotation
 import de.cau.cs.kieler.kexpressions.MethodDeclaration
 import de.cau.cs.kieler.kexpressions.OperatorExpression
 import de.cau.cs.kieler.kexpressions.OperatorType
@@ -50,6 +53,7 @@ import de.cau.cs.kieler.kexpressions.keffects.RandomizeCallEffect
 import de.cau.cs.kieler.kexpressions.keffects.extensions.KEffectsExtensions
 import de.cau.cs.kieler.kexpressions.kext.extensions.KExtDeclarationExtensions
 import de.cau.cs.kieler.kexpressions.kext.extensions.KExtEnumExtensions
+import de.cau.cs.kieler.core.diagnostics.UnsupportedConstructException
 import de.cau.cs.kieler.scg.Assignment
 import de.cau.cs.kieler.scg.codegen.CodeGeneratorSerializeHRExtensions
 import de.cau.cs.kieler.scg.extensions.SCGMethodExtensions
@@ -312,7 +316,12 @@ class CCodeSerializeHRExtensions extends CodeGeneratorSerializeHRExtensions {
         if (textExp.hasAnnotation(HOSTCODE_EVAL)) {
             val CDS = textExp.getClosestDeclarationScope // ClosestDeclarationScope
             if (CDS !== null) {
-                for (eval : textExp.getAnnotation(HOSTCODE_EVAL).asStringAnnotation.values) {
+                val evalAnnotation = textExp.getAnnotation(HOSTCODE_EVAL)
+                if (!(evalAnnotation instanceof StringAnnotation)) {
+                    // Diagnostics: KIELER fails reading the variable names from this annotation.
+                    throw evalAnnotation.annotationWithoutNames
+                }
+                for (eval : evalAnnotation.asStringAnnotation.values) {
                     val vo = CDS.findValuedObjectByName(eval)
                     if (vo !== null) {
                         val voText = vo.serialize
@@ -323,6 +332,20 @@ class CCodeSerializeHRExtensions extends CodeGeneratorSerializeHRExtensions {
         }
         return hostcode
     }  
+    
+    /**
+     * Diagnostics: @eval written without variable names (a tag) or with a JSON object. KIELER fails on it with a
+     * ClassCastException when it reads the names as strings.
+     */
+    protected def annotationWithoutNames(Annotation annotation) {
+        val issue = Issue.at("unsupported-construct", "@" + annotation.name + " needs "
+                + (if (annotation instanceof JsonAnnotation) "variable names, not a JSON object" else "the names of the variables in the host code")
+                + ", e.g. @" + annotation.name + " x `x + 1`.",
+            "List the variables the host code uses after @" + annotation.name + ", separated by commas, or remove the annotation. "
+                + "The official KIELER compiler cannot compile this @" + annotation.name + " either.",
+            annotation)
+        return new UnsupportedConstructException(issue, annotation)
+    }
     
     override dispatch CharSequence serialize(RandomCall randomCall) {
         if (!modifications.containsEntry(INCLUDES, "<stdlib.h>")) {

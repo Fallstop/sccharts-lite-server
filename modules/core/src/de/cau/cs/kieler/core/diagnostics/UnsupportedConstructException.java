@@ -13,8 +13,18 @@ public class UnsupportedConstructException extends IllegalArgumentException {
     /** The model object KIELER fails on. */
     public final transient EObject object;
 
+    /** The issue to report, when the code that throws can explain it; otherwise the processor that catches explains it. */
+    public final transient Issue issue;
+
     public UnsupportedConstructException(String message, EObject object) {
         super(message);
         this.object = object;
+        this.issue = null;
+    }
+
+    public UnsupportedConstructException(Issue issue, EObject object) {
+        super(issue.message);
+        this.object = object;
+        this.issue = issue;
     }
 }

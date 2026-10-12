@@ -14,6 +14,7 @@ package de.cau.cs.kieler.kicool.compilation.codegen
 
 import com.google.inject.Inject
 import com.google.inject.Injector
+import de.cau.cs.kieler.annotations.Pragma
 import de.cau.cs.kieler.annotations.Pragmatable
 import de.cau.cs.kieler.annotations.StringPragma
 import de.cau.cs.kieler.annotations.extensions.PragmaExtensions
@@ -22,6 +23,7 @@ import de.cau.cs.kieler.core.diagnostics.Issue
 import de.cau.cs.kieler.core.diagnostics.UnsupportedConstructException
 import de.cau.cs.kieler.core.properties.IProperty
 import de.cau.cs.kieler.core.properties.Property
+import de.cau.cs.kieler.kexpressions.JsonPragma
 import de.cau.cs.kieler.kexpressions.OperatorExpression
 import de.cau.cs.kieler.kexpressions.OperatorType
 import de.cau.cs.kieler.kicool.compilation.CodeContainer
@@ -83,12 +85,15 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
         preProcess(rootModel);
         
         if (rootModel instanceof Pragmatable) {
+            val reported = environment.errors.allMessages.size
             rootModel.processCustomNaming
+            // Diagnostics: a code.naming pragma the generator cannot read was reported; generate nothing.
+            if (environment.errors.allMessages.size > reported) return
         }
         
-        createModuleMap(rootModel, moduleMap)
-        
         try {
+            createModuleMap(rootModel, moduleMap)
+            
             for (moduleObject : moduleMap.keySet) {
                 moduleMap.get(moduleObject) => [
                     generateInit
@@ -110,7 +115,10 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
                 ]
             }
         } catch (UnsupportedConstructException failure) {
-            if (!reportTriggerlessSuspend(failure)) throw failure
+            // Diagnostics: a module met a construct KIELER cannot generate either; report it and generate nothing.
+            val issue = failure.issue ?: failure.triggerlessSuspend
+            if (issue === null) throw failure
+            environment.errors.add(null, issue.message, null, issue)
             return
         }
         
@@ -119,21 +127,19 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
     
     /**
      * Lab: KIELER's code generators fail on a negation without operand. The suspend transformation builds the only
-     * such negation, for a suspend without trigger, and traces it to that suspend. Reports the suspend as an error;
-     * false if the failure is about something else.
+     * such negation, for a suspend without trigger, and traces it to that suspend. The issue on that suspend, or null
+     * if the failure is about something else.
      */
-    protected def boolean reportTriggerlessSuspend(UnsupportedConstructException failure) {
+    protected def Issue triggerlessSuspend(UnsupportedConstructException failure) {
         val negation = failure.object
         if (!(negation instanceof OperatorExpression) || (negation as OperatorExpression).operator != OperatorType.NOT) {
-            return false
+            return null
         }
         val issue = Issue.at("unsupported-construct",
             "This suspend has no trigger. KIELER cannot compile a suspend without an if condition.",
             "Add the condition under which the state is suspended, for example suspend if pause.",
             negation)
-        if (issue.locations.empty) return false
-        environment.errors.add(null, issue.message, null, issue)
-        return true
+        return if (issue.locations.empty) null else issue
     }
     
     /**
@@ -147,7 +153,13 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
     protected def processCustomNaming(Pragmatable pragmatable) {
         if (!pragmatable.hasPragma(PRAGMA_CODE_NAMING)) return;
         
-        val naming = pragmatable.getPragma(PRAGMA_CODE_NAMING) as StringPragma
+        val pragma = pragmatable.getPragma(PRAGMA_CODE_NAMING)
+        if (!(pragma instanceof StringPragma)) {
+            // Diagnostics: KIELER fails reading the names from this pragma.
+            reportPragmaWithoutValues(pragma)
+            return
+        }
+        val naming = pragma as StringPragma
 
         if (naming.values.size == 4) {
             environment.setProperty(TICK_FUNCTION_NAME, naming.values.head)
@@ -166,6 +178,21 @@ abstract class AbstractCodeGenerator<T, E> extends Processor<T, CodeContainer> {
     protected def hostcodeSafeName(String string) {
         if (string === null) return ""
         string.replaceAll("[\\s-]","_")
+    }
+
+    /**
+     * Diagnostics: #code.naming written without values (a tag) or with a JSON object. KIELER fails on it with a
+     * ClassCastException when it reads the names as strings.
+     */
+    private def reportPragmaWithoutValues(Pragma pragma) {
+        val issue = Issue.at("unsupported-construct", "#" + pragma.name + " needs "
+                + (if (pragma instanceof JsonPragma) "plain values, not a JSON object" else "values")
+                + ", e.g. #" + pragma.name + " prefix.",
+            "Write #" + pragma.name + " prefix or #" + pragma.name + " suffix to name the generated functions after the model, "
+                + "or give four names for tick, reset, logic and the tick data, e.g. #" + pragma.name + " tick, reset, logic, TickData. "
+                + "Or remove the pragma. The official KIELER compiler cannot compile this #" + pragma.name + " either.",
+            pragma)
+        environment.errors.add(null, issue.message, pragma, issue)
     }
 
 }
