@@ -11,6 +11,8 @@ import org.eclipse.xtext.linking.ILinker
 import org.eclipse.xtext.naming.IQualifiedNameProvider
 import org.eclipse.xtext.parser.IParser
 import org.eclipse.xtext.parsetree.reconstr.ITransientValueService
+import org.eclipse.xtext.resource.IDefaultResourceDescriptionStrategy
+import org.eclipse.xtext.resource.IResourceDescription
 import org.eclipse.xtext.resource.XtextResource
 
 /**
@@ -40,6 +42,14 @@ class SCTXRuntimeModule extends AbstractSCTXRuntimeModule {
     
     override Class<? extends IValueConverterService> bindIValueConverterService() {
         return SCTXValueConverter
+    }
+
+    def Class<? extends IDefaultResourceDescriptionStrategy> bindIDefaultResourceDescriptionStrategy() {
+        return SCTXResourceDescriptionStrategy
+    }
+
+    def Class<? extends IResourceDescription.Manager> bindIResourceDescription$Manager() {
+        return SCTXResourceDescriptionManager
     }
 
 }

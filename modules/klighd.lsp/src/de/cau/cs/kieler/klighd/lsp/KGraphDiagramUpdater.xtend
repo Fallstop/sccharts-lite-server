@@ -179,11 +179,12 @@ class KGraphDiagramUpdater extends DiagramUpdater {
             if (hasErrors) {
                 // prettify the error message to be better readable line by line
                 val errors = (model as EObject).eResource.errors.fold(
-                    new StringBuilder, [builder, error | builder.append("\n" + error)]).toString
+                    new StringBuilder, [builder, error | builder.append("\nLine " + error.line + ": " + error.message)]).toString
                 model = new MessageModel("The model contains errors:\n" + errors)
             }
-            // Only update an erroneous model if there was no diagram shown before.
-            if (!hasErrors || server.currentRoot.type == "NONE") {
+            // Only update an erroneous model if there was no diagram shown before. A file opened with errors has no
+            // root yet.
+            if (!hasErrors || server.currentRoot === null || server.currentRoot.type == "NONE") {
                 // Not under the diagram-state lock: prepareModel waits for KLighD's main thread, whose queued
                 // layout step takes that same lock. prepareModel and createModel serialize on MODEL_LOCK instead.
                 prepareModel(server, model, uri)

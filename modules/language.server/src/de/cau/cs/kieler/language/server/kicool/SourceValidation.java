@@ -65,23 +65,27 @@ public final class SourceValidation {
             var dependencies = ((de.cau.cs.kieler.sccharts.text.SCTXResource) resource).getAllImports().values();
             var visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Resource, Boolean>());
             for (Resource dependency : new ArrayList<>(dependencies)) {
-                if (visited.add(dependency)) validateResource(dependency);
+                if (visited.add(dependency)) validateResource(dependency, dependency == resource ? null : resource);
             }
         } else {
-            validateResource(resource);
+            validateResource(resource, null);
         }
     }
 
-    private static void validateResource(Resource resource) {
+    /** @param importer the compiled resource when {@code resource} is one of its imports, otherwise null */
+    private static void validateResource(Resource resource, Resource importer) {
         if (!(resource instanceof XtextResource)) return;
         XtextResource source = (XtextResource) resource;
         String uri = source.getURI().toString();
         List<Issue> errors = new ArrayList<>();
+        String hint = importer == null ? "Fix this source error before compiling again."
+            : "This error is in " + source.getURI().lastSegment() + ", which " + importer.getURI().lastSegment()
+                + " imports. Fix it there before compiling again.";
         // Linking is lazy. Resolve it before inspecting resource errors or making a detached working copy.
         EcoreUtil.resolveAll(source);
         for (Resource.Diagnostic problem : source.getErrors()) {
             Issue issue = new Issue("source-validation", problem.getMessage());
-            issue.hint = "Fix this source error before compiling again.";
+            issue.hint = hint;
             int offset = problem instanceof Diagnostic ? ((Diagnostic) problem).getOffset() : 0;
             int length = problem instanceof Diagnostic ? ((Diagnostic) problem).getLength() : 0;
             issue.locations.add(location(source, offset, length, problem.getMessage()));
@@ -92,7 +96,7 @@ public final class SourceValidation {
             if (!blocksCompilation(problem)) continue;
             String message = problem.getMessage();
             Issue issue = new Issue("source-validation", message);
-            issue.hint = "Fix this source error before compiling again.";
+            issue.hint = hint;
             issue.locations.add(location(source, problem.getOffset() == null ? 0 : problem.getOffset(),
                 problem.getLength() == null ? 0 : problem.getLength(), message));
             errors.add(issue);

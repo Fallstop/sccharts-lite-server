@@ -28,6 +28,8 @@ import org.eclipse.emf.ecore.EReference
 import org.eclipse.emf.ecore.resource.Resource
 import org.eclipse.xtext.CrossReference
 import org.eclipse.xtext.GrammarUtil
+import org.eclipse.emf.ecore.EStructuralFeature
+import org.eclipse.xtext.diagnostics.DiagnosticMessage
 import org.eclipse.xtext.diagnostics.IDiagnosticConsumer
 import org.eclipse.xtext.diagnostics.IDiagnosticProducer
 import org.eclipse.xtext.linking.impl.Linker
@@ -42,13 +44,19 @@ import de.cau.cs.kieler.kexpressions.GenericParameterDeclaration
 class SCTXLinker extends Linker {
     
     var HashSet<State> acyclicPreLinking = null
-    
+
+    /** The resource whose model is being linked; pre-linking also visits imported charts. */
+    var Resource linking = null
+
     override protected doLinkModel(EObject model, IDiagnosticConsumer consumer) {
+        val outer = linking
         acyclicPreLinking = newHashSet
+        linking = model.eResource
         try {
             super.doLinkModel(model, consumer)
         } finally {
             acyclicPreLinking = null
+            linking = outer
         }
         
     }
@@ -65,7 +73,11 @@ class SCTXLinker extends Linker {
         checkUncontainedOpposites(obj, ref)
     }
     
-    override ensureLinked(EObject obj, IDiagnosticProducer producer) {
+    override ensureLinked(EObject obj, IDiagnosticProducer givenProducer) {
+        // An imported chart reports its own linking errors. Recording them here as well would attach that file's
+        // positions to the importing file.
+        val producer = if (linking !== null && obj.eResource !== null && obj.eResource !== linking) new DiscardingProducer
+            else givenProducer
         // Handle special linking of base states (inheritance).
         if (obj instanceof State) {
             // Pre-linking of base states
@@ -121,6 +133,14 @@ class SCTXLinker extends Linker {
                 ensureLinked(obj.reference, producer)
             }
         }
+    }
+
+    private static class DiscardingProducer implements IDiagnosticProducer {
+        var INode node
+        override addDiagnostic(DiagnosticMessage message) {}
+        override getNode() { node }
+        override setNode(INode node) { this.node = node }
+        override setTarget(EObject object, EStructuralFeature feature) {}
     }
 
     /** 

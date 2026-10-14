@@ -151,7 +151,6 @@ class SCTXValidator extends AbstractSCTXValidator {
     static val String IMMEDIATE_LOOP = "There is an immediate loop. The model is not SASC."
     
     static val String DEPRECATED_IMPORT = "The import pragma is no longer supported. Use import keyword."
-    static val String BROKEN_IMPORT = "Broken Import: There is no SCCharts model with the given name."
     static val String BROKEN_FOLDER_IMPORT = "Broken Import: There are no SCCharts models in the given directory."
 
     static val String COUNT_DELAY_OF_0 = "A count delay of 0 is not allowed on a trigger."
@@ -482,15 +481,46 @@ class SCTXValidator extends AbstractSCTXValidator {
             val res = scc.eResource as SCTXResource
             for (var i = 0; i < scc.imports.size; i++) {
                 val import = scc.imports.get(i)
-                if (res.directImports.get(import).empty) {
+                // A missing file stays in the resource set as a failed load and is registered on revalidation.
+                if (res.directImports.get(import).forall[!exists]) {
                     if (import.endsWith("*")) {
                         warning(BROKEN_FOLDER_IMPORT, scc, SCChartsPackage.eINSTANCE.SCCharts_Imports, i);
                     } else {
-                        warning(BROKEN_IMPORT, scc, SCChartsPackage.eINSTANCE.SCCharts_Imports, i);
+                        val file = if (import.endsWith(".sctx")) import else import + ".sctx"
+                        warning("Broken import: there is no " + file + " next to this file.", scc,
+                            SCChartsPackage.eINSTANCE.SCCharts_Imports, i);
+                    }
+                } else {
+                    val broken = brokenImport(res, import)
+                    if (broken !== null) error(broken, scc, SCChartsPackage.eINSTANCE.SCCharts_Imports, i)
+                }
+            }
+        }
+    }
+
+    /**
+     * Names the first file with syntax or linking errors that an import pulls in, directly or through its own imports.
+     * Those errors are only reported in that file, so without this the importing file would fail to compile silently.
+     */
+    private def String brokenImport(SCTXResource res, String path) {
+        val all = res.allImports
+        for (file : res.directImports.get(path)) {
+            val imported = all.get(file)
+            if (imported !== null) {
+                // A missing file is reported as a broken import by the file that imports it.
+                for (dependency : (#[imported] + imported.allImports.values.filter[it !== imported])
+                        .filter[underlyingFile !== null && underlyingFile.exists]) {
+                    val problem = dependency.errors.head
+                    if (problem !== null) {
+                        val name = dependency.URI.lastSegment
+                        val via = if (dependency === imported) "" else " (imported through " + imported.URI.lastSegment + ")"
+                        return "The imported file " + name + via + " has errors. Line " + problem.line + ": "
+                            + problem.message
                     }
                 }
             }
         }
+        return null
     }
     
     /**
