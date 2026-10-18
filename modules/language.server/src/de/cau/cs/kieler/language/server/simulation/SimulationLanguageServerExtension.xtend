@@ -333,6 +333,8 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
                         // Breakpoints and watches look at the pool this tick produced.
                         val tick = debugger.tick(sim, stepNumber)
                         lastTick = tick
+                        // A rewind's replayed ticks printed before; the client keeps those lines already.
+                        val printedLines = takePrinted(sim)
                         if (debugger.replaying) {
                             // A rewind drives the ticks itself and reports the final state once.
                             debugger.tickArrived
@@ -344,6 +346,7 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
                                 step = stepNumber
                                 watches = tick.watches
                                 breakpoint = tick.breakpoint
+                                printed = printedLines
                             ])
                             if (tick.breakpoint !== null) {
                                 if (!(sim.mode instanceof ManualMode)) {
@@ -409,6 +412,19 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
                 (e as TraceMismatchEvent).toString, "error")
         } else { // Handle unknown events, log the classes for which this is executed.
             println(e.class + ", " + o.class)
+        }
+    }
+
+    /**
+     * The lines the model printed since the last tick. The executable's output is read on its own thread,
+     * but in order: a tick's prints come before the tick's values, so they are all in by the step event.
+     */
+    private def List<String> takePrinted(SimulationContext sim) {
+        val lines = sim.simulationPrintOutput
+        synchronized (lines) {
+            val taken = new ArrayList<String>(lines)
+            lines.clear
+            return taken
         }
     }
 
@@ -594,13 +610,7 @@ class SimulationLanguageServerExtension implements ILanguageServerExtension, Sim
             rewound = true
         ])
         // The highlighter followed every replayed tick; lay the diagram out once for the final state.
-        if (currentlySimulatedModel !== null) {
-            try {
-                updateLayout(currentlySimulatedModel)
-            } catch (Exception e) {
-                // No diagram is open for the model; there is nothing to refresh.
-            }
-        }
+        LSDiagramHighlightingHandler.requestLayout(_kGraphLanguageServerExtension, currentlySimulatedModel)
         return result
     }
 

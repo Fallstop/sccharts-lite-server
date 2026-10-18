@@ -23,6 +23,7 @@ import org.eclipse.xtext.ide.ExecutorServiceProvider
 import org.eclipse.xtext.ide.server.DefaultProjectDescriptionFactory
 import org.eclipse.xtext.ide.server.IProjectDescriptionFactory
 import org.eclipse.xtext.ide.server.LanguageServerImpl
+import org.eclipse.xtext.ide.server.concurrent.RequestManager
 import org.eclipse.xtext.resource.IContainer
 import org.eclipse.xtext.resource.IResourceServiceProvider
 import org.eclipse.xtext.resource.ResourceServiceProviderServiceLoader
@@ -42,6 +43,8 @@ class LanguageServerModule extends AbstractModule {
         bind(IResourceServiceProvider.Registry).toProvider(ResourceServiceProviderServiceLoader)
         bind(IProjectDescriptionFactory).to(DefaultProjectDescriptionFactory)
         bind(IContainer.Manager).to(ProjectDescriptionBasedContainerManager)
+        // Finished requests must not pile up while a simulation lays out its diagram tick after tick.
+        bind(RequestManager).to(PruningRequestManager)
     }
     
 }

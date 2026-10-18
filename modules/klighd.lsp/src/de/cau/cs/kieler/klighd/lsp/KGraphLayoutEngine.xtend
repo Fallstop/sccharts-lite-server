@@ -24,6 +24,8 @@ import de.cau.cs.kieler.klighd.lsp.utils.RenderingPreparer
 import java.io.ByteArrayOutputStream
 import java.util.ArrayList
 import org.apache.log4j.Logger
+import org.eclipse.elk.alg.layered.options.LayeredOptions
+import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.math.ElkPadding
 import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.graph.ElkNode
@@ -91,6 +93,11 @@ class KGraphLayoutEngine extends ElkLayoutEngine {
             lightDiagramLayoutConfig.performLayout
             RenderingPreparer.prepareRenderingLayout(kGraphContext.viewModel, diagramState.getKGraphToSModelElementMap(uri))
         }
+        // ELK reuses its layered layout providers, and their spline edge router never empties its edge to
+        // segment map (ELK 0.11.0): every layout with spline edges stayed reachable through it. A running
+        // simulation lays out after every tick, so a long run kept gigabytes. A fresh provider per layout
+        // costs next to nothing next to the layout itself.
+        LayoutMetaDataService.instance.getAlgorithmData(LayeredOptions.ALGORITHM_ID)?.instancePool?.clear
     }
 
     override protected applyEngine(ElkNode elkGraph) {

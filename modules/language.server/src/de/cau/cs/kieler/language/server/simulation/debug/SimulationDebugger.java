@@ -55,8 +55,12 @@ import de.cau.cs.kieler.kicool.ProcessorReference;
  */
 public final class SimulationDebugger {
 
-    /** Bound on the pools kept for history and rewinding; the default of 100 forgets long runs. */
-    public static final int HISTORY_LENGTH = 100000;
+    /**
+     * Bound on the pools kept for the history request; KIELER's default of 100 forgets long runs. Rewinding
+     * replays the recorded inputs and does not need them. It was 100000, which let a long run at full speed
+     * hold gigabytes: each pool is the whole data pool of a tick.
+     */
+    public static final int HISTORY_LENGTH = 2000;
 
     private static final class Breakpoint {
         String id;

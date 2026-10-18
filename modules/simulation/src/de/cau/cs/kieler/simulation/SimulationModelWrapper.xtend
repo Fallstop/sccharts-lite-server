@@ -244,6 +244,10 @@ class AsynchronousRedirect extends Thread {
                                 val prefix = if (start > 0) line.substring(0, start) else ""
                                 val jsonPart = line.substring(start, end + 1)
                                 val postfix = if (end < line.length - 1) line.substring(end + 1) else ""
+                                // A print without a line break ends up on the line of the tick's values.
+                                if (!(prefix + postfix).trim.empty) {
+                                    sim.context.simulationPrintOutput.add(prefix + postfix)
+                                }
                                 output.println(prefix + postfix)
                                 jsonPart
                             }

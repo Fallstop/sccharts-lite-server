@@ -557,17 +557,19 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
      * Updates the layout of the diagram given by the uri and sends it to the client.
      * 
      * @param uri The uri of the model file.
+     * @return Completes once the new layout went to the client, or at once if no diagram shows the model.
      */
-    def void updateLayout(String uri) {
+    def CompletableFuture<Void> updateLayout(String uri) {
         if (diagramUpdater instanceof KGraphDiagramUpdater) {
             val diagramServer = findDiagramServerForUri(uri)
             // No diagram shows this model, so there is nothing to lay out. An empty result used to
             // become a null server and the NPE failed whatever asked for the refresh - a simulation
             // start or step, which has no business failing over a diagram that is not open.
             if (diagramServer !== null) {
-                (diagramUpdater as KGraphDiagramUpdater).updateLayout(diagramServer)
+                return (diagramUpdater as KGraphDiagramUpdater).updateLayout(diagramServer).thenCompose[it]
             }
         }
+        return CompletableFuture.completedFuture(null)
     }
 
     /**
@@ -575,7 +577,7 @@ class KGraphLanguageServerExtension extends SyncDiagramLanguageServer
      * the client's spelling, which percent-encodes a path with spaces, while callers such as the
      * simulation carry the decoded one; KGraphDiagramState reads its maps under both for the same reason.
      */
-    private def KGraphDiagramServer findDiagramServerForUri(String uri) {
+    def KGraphDiagramServer findDiagramServerForUri(String uri) {
         if (uri === null) {
             return null
         }

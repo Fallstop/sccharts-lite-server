@@ -61,6 +61,7 @@ import org.eclipse.emf.ecore.EObject
 import org.eclipse.sprotty.Action
 import org.eclipse.sprotty.ActionMessage
 import org.eclipse.sprotty.RejectAction
+import org.eclipse.sprotty.RequestModelAction
 import org.eclipse.sprotty.SModelElement
 import org.eclipse.sprotty.SModelRoot
 import org.eclipse.sprotty.SelectAction
@@ -92,6 +93,13 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
      * an eventual UpdateModelAction.
      */
     protected boolean newModel
+
+    /**
+     * The diagram options last sent to the client, by value. A running simulation lays the diagram out after
+     * every tick, and each layout sent all the synthesis options again: some ten kilobytes the client kept,
+     * per tick. Unchanged options are no longer sent; a client that requests the model gets them anew.
+     */
+    String sentDiagramOptions
     
     /**
      * The current root element of the {@link SKGraph}. Stored here during communication with the client.
@@ -187,6 +195,13 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
                 }
                 val layoutOptionUIData = calculateLayoutOptionUIData(viewContext.displayedLayoutOptions)
                 val actionData = viewContext.displayedActions.map[new DisplayedActionUIData(it)]
+                val sent = uri + "|" + synthesisOptions.map[synthesisOption.id + "=" + currentValue].join(";") + "|"
+                    + layoutOptionUIData.map[optionId + "=" + defaultValue?.key].join(";") + "|"
+                    + actionData.map[actionId].join(";")
+                if (sent == sentDiagramOptions) {
+                    return
+                }
+                sentDiagramOptions = sent
                 dispatch(new UpdateDiagramOptionsAction(synthesisOptions, layoutOptionUIData, actionData, uri))
             }
         }
@@ -497,6 +512,12 @@ class KGraphDiagramServer extends LanguageAwareDiagramServer {
         }
     }
     
+    override protected handle(RequestModelAction request) {
+        // A new or reloaded client has no options yet.
+        sentDiagramOptions = null
+        super.handle(request)
+    }
+
     /** Sets or updates the {@code currentRoot} as the model. */
     protected def void setOrUpdateModel() {
         if (newModel) {

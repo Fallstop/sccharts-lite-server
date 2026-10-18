@@ -26,6 +26,8 @@ import de.cau.cs.kieler.simulation.events.SimulationControlEvent.SimulationOpera
 import de.cau.cs.kieler.simulation.ide.CentralSimulation
 import de.cau.cs.kieler.simulation.ide.visualization.AbstractDiagramHighlighter
 import de.cau.cs.kieler.simulation.ide.visualization.AbstractDiagramHighlightingHandler
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Works similar to the KlighdPiccoloDiagramHighlightingHandler. After each stop, start, or step action the diagram layout is updated.
@@ -47,6 +49,12 @@ class LSDiagramHighlightingHandler extends AbstractDiagramHighlightingHandler im
      * but the diagram is only laid out once at the end instead of once per replayed tick.
      */
     public static volatile boolean suppressLayoutUpdates = false
+
+    /** A simulation-triggered layout is on its way to the client. */
+    static val layoutRunning = new AtomicBoolean
+
+    /** A tick came in while a layout was running: lay out once more when it is done. */
+    static volatile String layoutWanted = null
     
     static def create(Injector parentInjector, Class<? extends AbstractDiagramHighlighter> highlighter) {
         val injector = parentInjector.createChildInjector(new Module() {
@@ -69,24 +77,55 @@ class LSDiagramHighlightingHandler extends AbstractDiagramHighlightingHandler im
         }
 
         try {
-            switch (e.operation) {
-                case START : highlighter.initialize(ctx)
-                case STOP : highlighter.stop(ctx)
-                case STEP: highlighter.update(ctx)
+            // The highlighter edits the KGraph's styles. The diagram generator and the layout read them under
+            // the diagram state's lock, and the diagram sent to the client shares them, serialized under the
+            // diagram server's model lock, which is taken first. Unlocked, a fast run tore those reads apart.
+            val server = kgraphExt.findDiagramServerForUri(simulationExt.currentlySimulatedModel)
+            synchronized (server?.modelLock ?: diagramState) {
+                synchronized (diagramState) {
+                    switch (e.operation) {
+                        case START : highlighter.initialize(ctx)
+                        case STOP : highlighter.stop(ctx)
+                        case STEP: highlighter.update(ctx)
+                    }
+                }
             }
         } catch (Exception ex) {
             ex.printStackTrace
         } finally {
-            if (!suppressLayoutUpdates && (e.operation == SimulationOperation.START || e.operation == SimulationOperation.STOP ||
-                e.operation == SimulationOperation.STEP)) {
-                try {
-                    kgraphExt.updateLayout(simulationExt.currentlySimulatedModel)
-                } catch (Exception ex) {
-                    // The diagram only visualises the run: a refresh that fails must not take down the
-                    // start, step or stop that triggered it.
-                    ex.printStackTrace
-                }
+            if (!suppressLayoutUpdates) {
+                requestLayout(kgraphExt, simulationExt.currentlySimulatedModel)
             }
+        }
+    }
+
+    /**
+     * Lays out the simulated model's diagram so it shows the latest highlighting. Ticks can come far faster
+     * than layouts: each one used to queue a layout of its own, the queue grew without bound and the server
+     * and the editor drowned in redraws. Now one layout runs at a time, and the ticks that came in meanwhile
+     * share one more layout once it is done, which shows the state after the last of them.
+     */
+    static def void requestLayout(KGraphLanguageServerExtension kgraphExt, String uri) {
+        if (uri === null) {
+            return
+        }
+        layoutWanted = uri
+        if (layoutRunning.compareAndSet(false, true)) {
+            layoutWanted = null
+            var CompletableFuture<Void> future
+            try {
+                future = kgraphExt.updateLayout(uri)
+            } catch (Exception ex) {
+                // The diagram only visualises the run: a refresh that fails must not take down the
+                // start, step or stop that triggered it.
+                ex.printStackTrace
+                future = CompletableFuture.completedFuture(null)
+            }
+            future.whenComplete [ result, error |
+                layoutRunning.set(false)
+                val next = layoutWanted
+                if (next !== null) requestLayout(kgraphExt, next)
+            ]
         }
     }
 

@@ -91,6 +91,8 @@ public final class DebugMessages {
         public BreakpointHit breakpoint;
         /** Set on the message that shows the state reached by a rewind. */
         public boolean rewound;
+        /** What the model printed during the tick, line by line. */
+        public List<String> printed;
     }
 
     public static final class RunToBreakpointParam {
