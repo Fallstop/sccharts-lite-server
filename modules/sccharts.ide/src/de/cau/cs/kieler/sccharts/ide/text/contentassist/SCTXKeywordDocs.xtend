@@ -40,7 +40,7 @@ class SCTXKeywordDocs {
          * because templates break lines with the platform separator and Markdown wants plain newlines.
          */
         def String markdown() {
-            "**`" + title + "`** — " + detail + "\n\n" + body
+            "**`" + title + "`**: " + detail + "\n\n" + body
         }
     }
 

@@ -44,8 +44,8 @@ import org.eclipse.xtext.xtext.CurrentTypeFinder
  * Content assist for SCTX.
  *
  * <p>Xtext's default provider offers exactly what the content assist parser computes as the follow set, which
- * for SCTX means undocumented keywords, every binary operator of the expression grammar, and — because the
- * generated parser stops inside the declaration loop of a state body — neither the local action keywords nor
+ * for SCTX means undocumented keywords, every binary operator of the expression grammar, and (because the
+ * generated parser stops inside the declaration loop of a state body) neither the local action keywords nor
  * the variables of a transition trigger. This provider</p>
  * <ul>
  * <li>documents keywords from {@link SCTXKeywordDocs} and drops the bare operators,</li>
@@ -146,7 +146,7 @@ class SCTXProposalProvider extends IdeContentProposalProvider {
     }
 
     /**
-     * True right after a token that opens an expression — `if`, `do`, an operator. The follow set stops at
+     * True right after a token that opens an expression: `if`, `do`, an operator. The follow set stops at
      * the rule call there, so no valued object reaches the proposal list.
      */
     private def boolean isExpressionPosition(ContentAssistContext context) {

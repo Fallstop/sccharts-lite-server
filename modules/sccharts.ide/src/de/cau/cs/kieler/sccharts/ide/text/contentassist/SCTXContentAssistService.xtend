@@ -22,7 +22,7 @@ import org.eclipse.xtext.ide.server.contentassist.ContentAssistService
 
 /**
  * Xtext hands {@code ContentAssistEntry.documentation} to the client as a plain string, which editors show
- * verbatim — backticks, headings and all. The proposal documentation is Markdown, so it is sent as
+ * verbatim: backticks, headings and all. The proposal documentation is Markdown, so it is sent as
  * {@link MarkupContent} instead, the same way the hover cards are.
  */
 @Singleton
